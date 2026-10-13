@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lexonaut: how AI sees language</title>
+<style>
+:root{--bg:#05070f;--panel:#0c1020;--line:#1c2547;--text:#e6ebff;--dim:#8d97c2;--cyan:#22d3ee;--violet:#a78bfa;--pink:#f472b6;--amber:#fbbf24}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#121a44 0%,var(--bg) 60%);color:var(--text);font-family:"Segoe UI",system-ui,sans-serif;line-height:1.55}
+header{position:sticky;top:0;z-index:5;display:flex;gap:24px;align-items:center;flex-wrap:wrap;padding:12px 24px;background:#05070fe6;border-bottom:1px solid var(--line)}
+.logo{font-weight:700;letter-spacing:.04em;color:var(--cyan);text-shadow:0 0 12px #22d3ee88}
+nav a{color:var(--text);text-decoration:none;margin-right:16px;font-size:.95rem}
+nav a.soon{color:var(--dim);cursor:default}
+main{max-width:980px;margin:0 auto;padding:24px}
+h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.15;margin:32px 0 8px}
+.sub{color:var(--dim);max-width:60ch;margin:0 0 20px}
+textarea{width:100%;min-height:90px;padding:14px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;font-size:1.05rem;font-family:inherit}
+textarea:focus,button:focus-visible{outline:2px solid var(--cyan)}
+button{margin-top:10px;padding:12px 22px;border:1px solid var(--cyan);background:#22d3ee1a;color:var(--cyan);border-radius:8px;font-size:1rem;cursor:pointer;box-shadow:0 0 14px #22d3ee44}
+button:disabled{opacity:.4;cursor:wait}
+.load{height:6px;background:var(--panel);border-radius:4px;margin-top:16px;overflow:hidden}
+#bar{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .4s}
+#status{color:var(--dim);font-size:.9rem;margin-top:6px}
+.panel{margin-top:40px;padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+h2{margin:0 0 4px}h3{margin:28px 0 8px}
+.note{color:var(--dim);font-size:.92rem;max-width:70ch}
+.row{margin-top:16px}
+.rowhead{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:.95rem;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{padding:3px 7px;border-radius:5px;font-family:Consolas,monospace;font-size:.88rem;border:1px solid}
+.bars{display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:150px 1fr 90px;gap:10px;align-items:center;font-size:.9rem}
+.fill{height:14px;border-radius:7px;box-shadow:0 0 10px currentColor}
+.group{margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
+/* Galaxy */
+.gwrap{position:relative;height:560px;margin-top:14px;border-radius:12px;overflow:hidden;background:#03050c;border:1px solid var(--line)}
+.gwrap canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.tip{position:absolute;pointer-events:none;display:none;background:#000d;border:1px solid var(--line);padding:5px 9px;border-radius:6px;font-size:.85rem;max-width:320px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:.88rem;color:var(--dim)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;box-shadow:0 0 8px currentColor}
+#gstatus{color:var(--dim);font-size:.9rem;margin-top:10px}
+.box{margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#080b18;font-size:.92rem}
+.box:empty{display:none}
+.nnrow{display:flex;gap:10px;align-items:baseline;margin-top:4px}
+.tag{font-size:.75rem;padding:1px 6px;border-radius:4px;border:1px solid;white-space:nowrap}
+.sim{margin-left:auto;color:var(--dim);font-family:Consolas,monospace;white-space:nowrap}
+[hidden]{display:none!important}
+.orow{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.orow:last-child{border-bottom:0}
+.orow .oname{font-weight:600}
+input[type=range]{accent-color:#fb923c;width:100%;cursor:pointer}
+.ends{display:flex;justify-content:space-between;color:var(--dim);font-size:.78rem;margin-top:2px}
+.meter{height:8px;background:#ffffff14;border-radius:4px;overflow:hidden;margin-top:8px}
+.meter>div{height:100%;width:0;background:linear-gradient(90deg,#f472b6,#34d399);transition:width .3s}
+.gwrap.small{height:380px}
+.q{font-size:1.35rem;font-weight:600;margin:4px 0}
+.hint{color:var(--dim);font-size:.9rem;min-height:1.3em}
+.gbtns{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.gbtns button{margin-top:6px}
+button.yes{border-color:#34d399;color:#34d399;background:#34d3991a;box-shadow:0 0 14px #34d39944}
+button.no{border-color:#f472b6;color:#f472b6;background:#f472b61a;box-shadow:0 0 14px #f472b644}
+button.ghost{border-color:var(--line);color:var(--dim);background:transparent;box-shadow:none}
+.ginfo{color:var(--dim);font-size:.9rem;margin-top:8px}
+.glog{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px}
+.glog td,.glog th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left}
+.glog th{color:var(--dim);font-weight:500}
+input[type=text]{padding:9px 12px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;font-size:1rem}
+@media(max-width:600px){.orow{grid-template-columns:1fr}.bar{grid-template-columns:100px 1fr 70px}.gwrap{height:420px}}
+/* Landing and menu */
+a.logo{text-decoration:none}
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;overflow:hidden}
+.herologo{font-size:clamp(3rem,12vw,7rem);font-weight:700;letter-spacing:.04em;color:var(--cyan);text-shadow:0 0 30px #22d3ee88;line-height:1.1}
+.herosub{color:var(--dim);font-size:1.15rem;max-width:46ch;margin:16px auto 28px}
+.menuwrap{max-width:980px;margin:0 auto;padding:24px}
+/* Rocket button: only the rocket, flies away on click */
+button.rocket{margin-top:24px;padding:0;border:0;background:none;box-shadow:none;animation:float 3.2s ease-in-out infinite}
+button.rocket .rk{font-size:5rem;display:inline-block;transition:transform .3s;filter:drop-shadow(0 0 18px #22d3ee99)}
+button.rocket:hover .rk{transform:translate(6px,-6px) rotate(8deg) scale(1.1)}
+button.rocket.launch{animation:fly .9s cubic-bezier(.5,0,1,.6) forwards;pointer-events:none}
+@keyframes fly{to{transform:translate(70vw,-120vh) scale(.5);opacity:0}}
+@media(prefers-reduced-motion:reduce){button.rocket{animation:none}}
+/* Keep sentences on full lines */
+.note,.sub{max-width:none}
+#status:empty{display:none}
+.langgap{margin-top:44px}
+/* v2 additions */
+#backbar button{margin:0 0 6px}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:10px}
+.taxcard{padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#080b18}
+.taxcard .tn{font-size:.9rem;font-weight:600}
+.taxcard .tx{font-size:2.2rem;font-weight:700;line-height:1.2}
+.taxcard .td{color:var(--dim);font-size:.82rem;margin-top:6px}
+.gauge{height:8px;background:#ffffff14;border-radius:4px;overflow:hidden;margin-top:6px}
+.gauge>div{height:100%}
+.fitrow{display:grid;grid-template-columns:90px 1fr 120px;gap:10px;align-items:center;margin-top:6px;font-size:.88rem}
+.blocks{display:flex;flex-wrap:wrap;gap:2px}
+.blk{width:9px;height:9px;border-radius:2px}
+.explain b.m{font-size:1rem}
+.explain p{margin:6px 0 0}
+#ulabel{position:absolute;display:none;pointer-events:none;color:#fff;font-weight:600;font-size:.8rem;text-shadow:0 0 6px #000;white-space:nowrap;transform:translateX(-50%)}
+button.find{border-color:#fff;color:#fff;background:#ffffff1a;box-shadow:0 0 14px #ffffff55}
+
+/* ===== Galaxy theme ===== */
+body{background:#000}
+#stars{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#landing,#menu,main{position:relative;z-index:1}
+.panel{background:#0c1020b3;backdrop-filter:blur(6px);border-color:#a78bfa44;box-shadow:0 0 30px #7c3aed22}
+.box{background:#080b18aa}
+.herologo{background:linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 24px #a78bfa88)}
+.herosub{font-size:1.4rem;letter-spacing:.08em;color:#c7cffc}
+/* ===== Menu: four planets ===== */
+#menu{min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+#menu h1{text-align:center}
+#menu .sub{text-align:center;margin:0 auto 8px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);justify-items:center;gap:40px 20px;margin-top:36px}
+@media(max-width:600px){.cards{grid-template-columns:1fr}}
+button.card{position:relative;margin:0;padding:0;border:0;border-radius:50%;background:none;box-shadow:none;color:#fff;width:min(260px,70vw);aspect-ratio:1;display:block;perspective:900px;animation:float 7s ease-in-out infinite;font-family:inherit;overflow:visible}
+button.card:nth-child(2){animation-delay:-1.8s}
+button.card:nth-child(3){animation-delay:-3.6s}
+button.card:nth-child(4){animation-delay:-5.4s}
+button.card:hover,button.card:focus-visible{animation-play-state:paused}
+button.card:focus-visible{outline:none}
+button.card .pf{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.4,.2,.2,1)}
+button.card:hover .pf,button.card:focus-visible .pf{transform:rotateY(180deg)}
+button.card .face{position:absolute;inset:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 38px;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:inset -30px -30px 60px #000b,inset 10px 10px 36px #ffffff22,0 0 40px var(--pg)}
+button.card .back{transform:rotateY(180deg)}
+button.card .name{font-size:1.45rem;font-weight:700;text-shadow:0 2px 10px #000a}
+button.card .sent{font-size:1rem;line-height:1.35;color:#fff;text-shadow:0 1px 6px #000a;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+button.card[data-go="tokens"]{--pg:#22d3ee88}
+button.card[data-go="galaxy"]{--pg:#a78bfa88}
+button.card[data-go="style"]{--pg:#fb923c88}
+button.card[data-go="guess"]{--pg:#34d39988}
+/* Token: cratered moon-like planet */
+button.card[data-go="tokens"] .face{background:radial-gradient(circle at 62% 62%,#0004 0 7%,transparent 8%),radial-gradient(circle at 35% 70%,#0004 0 5%,transparent 6%),radial-gradient(circle at 70% 30%,#0003 0 4%,transparent 5%),radial-gradient(circle at 30% 28%,#7ee8fa 0%,#0e7490 45%,#082f49 100%)}
+/* Galaxy: ringed planet */
+button.card[data-go="galaxy"] .face{background:radial-gradient(circle at 30% 28%,#d8c7ff 0%,#7c3aed 45%,#2e1065 100%)}
+button.card[data-go="galaxy"]::before,button.card[data-go="galaxy"]::after{content:"";position:absolute;left:-22%;right:-22%;top:34%;bottom:34%;border-radius:50%;border:10px solid #f0abfccc;box-shadow:0 0 18px #a78bfa;transform:rotate(-18deg);pointer-events:none}
+button.card[data-go="galaxy"]::before{z-index:-1}
+button.card[data-go="galaxy"]::after{z-index:3;clip-path:inset(50% -10% -10% -10%)}
+/* Style: banded gas giant */
+button.card[data-go="style"] .face{background:radial-gradient(ellipse at 65% 65%,#7c1d3a99 0 9%,transparent 10%),repeating-linear-gradient(170deg,#ffffff1f 0 7%,transparent 7% 15%),radial-gradient(circle at 30% 28%,#ffd0a8 0%,#ea580c 40%,#7c1d3a 100%)}
+/* Guess: Earth-like planet */
+button.card[data-go="guess"] .face{background:radial-gradient(ellipse at 35% 40%,#4ade80aa 0 14%,transparent 15%),radial-gradient(ellipse at 65% 65%,#4ade80aa 0 12%,transparent 13%),radial-gradient(ellipse at 70% 25%,#fffa 0 8%,transparent 9%),radial-gradient(circle at 30% 28%,#7dd3fc 0%,#0369a1 45%,#082f49 100%)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@media(prefers-reduced-motion:reduce){button.card{animation:none}}
+/* ===== Smaller Hindi / Marathi tax cards ===== */
+#taxcards .cards3{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+#taxcards .taxcard{padding:8px 10px}
+#taxcards .taxcard .tx{font-size:1.3rem}
+#taxcards .taxcard .td{font-size:.74rem;margin-top:3px}
+#taxcards .gauge{height:5px}
+/* ===== Galaxy explanation boxes ===== */
+.xbox ul{margin:8px 0 0;padding-left:20px}
+.xbox li{margin-top:4px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.fact{padding:12px;border:1px solid #a78bfa55;border-radius:12px;background:linear-gradient(160deg,#a78bfa22,#22d3ee11);transition:transform .2s}
+.fact:hover{transform:translateY(-4px)}
+.fact .fe{font-size:1.8rem}
+.fact p{margin:4px 0 0;color:var(--dim);font-size:.88rem}
+
+/* Interactive galaxy cards */
+.fact{cursor:pointer;user-select:text}
+.fact:focus-visible{outline:2px solid var(--cyan)}
+.fact.open{border-color:#22d3ee;background:linear-gradient(160deg,#a78bfa33,#22d3ee22);grid-column:span 2}
+@media(max-width:600px){.fact.open{grid-column:auto}}
+.fact p{color:#c7cffc;font-size:.92rem;line-height:1.5}
+.fx{margin-top:10px;font-size:.88rem;line-height:1.5;color:#e6ebff}
+.fx span{display:block;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);margin-bottom:2px}
+.fhint{margin-top:8px;font-size:.78rem;color:var(--dim)}
+.fact.open .fhint{display:none}
+.tryit{margin:12px 0 0;padding:6px 14px;font-size:.85rem}
+.factbar{display:flex;align-items:center;margin-top:12px;font-size:.88rem;color:var(--dim)}
+/* Zoom buttons */
+.zoomctl{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.zoomctl button{margin:0;width:40px;height:40px;padding:0;font-size:1.4rem;background:#000a;border-color:#a78bfa;color:#fff;box-shadow:none}
+</style>
+<script type="importmap">
+{"imports":{
+ "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div id="landing" class="hero"><div>
+  <div class="herologo">Lexonaut</div>
+  <p class="herosub">How AI sees language.</p>
+  <button id="rocket" class="rocket" type="button" aria-label="Launch"><span class="rk">🚀</span></button>
+</div></div>
+
+<div id="menu" class="menuwrap" hidden>
+  <h1>Welcome aboard, explorer</h1>
+  <p class="sub">Pick any planet below and we will fly there together. There is no wrong turn.</p>
+  <div class="cards">
+    <button class="card" data-go="tokens"><span class="pf"><span class="face front"><span class="name">Bits</span></span><span class="face back"><span class="sent">Your sentence walks in and gets cut into bite-sized pieces.</span></span></span></button>
+    <button class="card" data-go="galaxy"><span class="pf"><span class="face front"><span class="name">Sense</span></span><span class="face back"><span class="sent">Every sentence becomes a star, and the ones that mean alike gather together.</span></span></span></button>
+    <button class="card" data-go="style"><span class="pf"><span class="face front"><span class="name">Tone</span></span><span class="face back"><span class="sent">Turn the dials and hear the same idea in a new voice.</span></span></span></button>
+    <button class="card" data-go="guess"><span class="pf"><span class="face front"><span class="name">Clues</span></span><span class="face back"><span class="sent">Keep a word secret while the AI follows the clues to catch it.</span></span></span></button>
+  </div>
+</div>
+
+<main hidden>
+  <div id="backbar"><button class="ghost" data-go="menu">&larr; Menu</button></div>
+  <div id="view-tokens">
+  <h1>Follow a sentence through an AI's mind</h1>
+  <div class="note" style="margin:6px 0 8px;font-size:1.05rem"><b>Write a sentence:</b></div>
+  <textarea id="inp" aria-label="Your sentence">I am going to the market to buy vegetables.</textarea>
+  <button id="go" disabled>Send it through</button>
+  <section class="panel" id="tokdef">
+    <p class="note" style="max-width:none;margin-top:0"><b>Tokens:</b> An AI cannot read letters the way you do. Before anything else, it chops your sentence into small pieces called tokens.</p>
+    <p class="note" style="max-width:none;margin-bottom:0"><b>Tokenization:</b> Tokenization is the process of breaking text into these smaller units called tokens.</p>
+  </section>
+  <div class="load"><div id="bar"></div></div>
+  <div id="status">Loading models... (first visit only, then they are cached)</div>
+
+  <div id="tokens" hidden>
+    <section class="panel">
+      <p class="note" style="max-width:none;margin-top:0">Different AI models tokenize in different ways, so here are three famous ones.</p>
+      <div class="cards3 explain">
+        <div class="box"><b class="m" style="color:#22d3ee">GPT-2 (BPE)</b><p>Built in 2019 by OpenAI.</p></div>
+        <div class="box"><b class="m" style="color:#a78bfa">BERT multilingual (WordPiece)</b><p>Built in 2018 by Google.</p></div>
+        <div class="box"><b class="m" style="color:#f472b6">XLM-R (SentencePiece)</b><p>Built in 2019 by Meta.</p></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h3 style="margin-top:0">Your sentence, chopped by each tokenizer</h3>
+      <p class="note">Each colored box is one token. The colors only help you see where one token ends and the next begins; they have no other meaning. A <b>·</b> at the start of a box means "there was a space before this piece". A <b>##</b> at the start means "this piece is glued to the previous one".</p>
+      <div id="chips"></div>
+      <div class="box explain">
+        <b>What is fertility?</b>
+        <p>Fertility means <b>tokens per word</b>: number of tokens divided by number of words. Fertility 1.0 means one token per word. A higher number means words are being broken into more pieces, which is more work for the model and more cost for you.</p>
+      </div>
+    </section>
+    <section class="panel">
+      <h3 style="margin-top:0">Token count for your text</h3>
+      <p class="note">A longer bar means more tokens for the same sentence. The number on the right is the exact count.</p>
+      <div class="bars" id="mine"></div>
+    </section>
+  </div>
+
+  <section class="panel" id="tokentax" hidden>
+    <h2>Token Tax</h2>
+    <div class="box">
+      <b>Your sentence in Hindi and Marathi</b>
+      <p class="note">Token Tax compares your English sentence with the same meaning in other languages. Your English sentence is translated into Hindi and Marathi automatically, and those translations are used below.</p>
+      <div id="trans"></div>
+    </div>
+    <h3>Same meaning, three languages</h3>
+    <p class="note">The "x" number is how many times more tokens than English. That extra cost is the token tax.</p>
+    <div id="langs"></div>
+
+    <div id="taxcards" class="langgap"></div>
+  </section>
+  </div>
+
+  <section class="panel" id="galaxy">
+    <h2>Galaxy of Words</h2>
+    <p class="note">Type a sentence and press <b>Send it through</b>. It will appear as a dot among thousands of other sentences.</p>
+    <textarea id="ginp" aria-label="Your sentence for the galaxy">I am going to the market to buy vegetables.</textarea>
+    <div class="gbtns"><button id="gGo" disabled>Send it through</button><button class="find" id="gFind">Search my dot</button></div>
+    <div class="box" id="myDot" hidden></div>
+    <div class="box xbox" id="gHow" hidden>
+      <b>How to read this map</b>
+      <ul>
+        <li>Your sentence is the <b style="color:#fff">white dot</b> (it has a small label). Cannot see it? Press <b>Search my dot</b>.</li>
+        <li>Every other dot is one sentence: <span style="color:#22d3ee">English</span>, <span style="color:#f472b6">Hindi</span> or <span style="color:#a78bfa">Marathi</span>.</li>
+        <li>Dots that sit close together have a similar meaning, even when the language is different.</li>
+        <li>Drag to rotate, scroll or use the + and &minus; buttons to zoom, click a dot to see the same sentence in the other languages.</li>
+      </ul>
+    </div>
+    <div id="galaxyHome">
+      <div class="gwrap" id="gwrap">
+        <canvas id="gcanvas"></canvas>
+        <div class="tip" id="tip"></div>
+        <div id="ulabel">&#9660; Your sentence</div>
+        <div class="zoomctl"><button id="zin" type="button" aria-label="Zoom in">+</button><button id="zout" type="button" aria-label="Zoom out">&minus;</button><button id="zreset" type="button" aria-label="Reset view">&#8634;</button></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="note" id="movedNote" hidden>The galaxy is in the "Guess My Word" panel below while a game is running.</div>
+    <div id="gstatus">Loading galaxy...</div>
+    <div class="box" id="pairinfo"></div>
+    <div class="box xbox" id="gPurpose">
+      <b style="font-size:1.1rem">Why does this galaxy exist? 🌌</b>
+      <p class="note" style="margin:6px 0 0">Tap a card to open it. Each one has a real-world example and a line you can say if your teacher asks.</p>
+      <div class="factbar"><span id="factProg">0 of 5 cards explored</span><div class="gauge" style="flex:1;margin:0 10px"><div id="factGauge" style="width:0;background:linear-gradient(90deg,#22d3ee,#a78bfa)"></div></div><button class="ghost" id="factAll" type="button" style="margin:0;padding:4px 12px;font-size:.85rem">Open all</button></div>
+      <div class="facts">
+        <div class="fact" tabindex="0" role="button" aria-expanded="false"><div class="fe">🧠</div><b>Words become numbers</b><p>A computer cannot read meaning, so the AI turns every sentence into a list of 384 numbers called an embedding. Sentences that mean similar things get similar lists of numbers.</p><div class="fmore" hidden><div class="fx"><span>🌍 Real-world example</span>When you search "cheap flights to Goa", the website turns your words into numbers and compares them with every page. A page titled "low-cost air tickets to Goa" still shows up, even though it shares almost no words with your search.</div><div class="fx"><span>🎓 If your teacher asks</span>An embedding is a vector (a list of numbers) that represents a sentence. This project uses the model paraphrase-multilingual-MiniLM-L12-v2, which gives a 384-number vector for each sentence.</div><button type="button" class="tryit" data-try="try:I am going to the market to buy vegetables.">Try it: send an English sentence</button></div><div class="fhint">Tap to see an example ▾</div></div>
+        <div class="fact" tabindex="0" role="button" aria-expanded="false"><div class="fe">🤝</div><b>Same meaning = neighbours</b><p>Sentences with the same meaning sit close together on the map, even when they are written in different languages. The model learned this from a huge number of translated sentence pairs.</p><div class="fmore" hidden><div class="fx"><span>🌍 Real-world example</span>"I am going to the market" in English, "मैं बाज़ार जा रहा हूँ" in Hindi and "मी बाजारात जात आहे" in Marathi land almost on the same spot, like three friends standing together. This is how a customer-care chatbot can answer a Hindi question using an English help page.</div><div class="fx"><span>🎓 If your teacher asks</span>This is called cross-lingual semantic alignment: the meaning of a sentence decides its position, not its spelling or its language.</div><button type="button" class="tryit" data-try="try:मैं बाजार जा रहा हूं।">Try it: send a Hindi sentence</button></div><div class="fhint">Tap to see an example ▾</div></div>
+        <div class="fact" tabindex="0" role="button" aria-expanded="false"><div class="fe">🔎</div><b>Why it matters</b><p>It lets computers search and compare by meaning instead of by exact words. This idea is behind modern search engines, chatbots, translation tools and recommendation systems.</p><div class="fmore" hidden><div class="fx"><span>🌍 Real-world example</span>A help-desk bot can understand that "my internet is not working" and "WiFi is down" describe the same problem, and show the same fix for both. A music app can suggest songs with a similar feel in the same way.</div><div class="fx"><span>🎓 If your teacher asks</span>This is called semantic search: instead of matching keywords, the system compares embeddings, usually with cosine similarity (the same score shown in the Style section as "Meaning kept").</div><button type="button" class="tryit" data-try="try:My internet is not working.">Try it: send a problem sentence</button></div><div class="fhint">Tap to see an example ▾</div></div>
+        <div class="fact" tabindex="0" role="button" aria-expanded="false"><div class="fe">📚</div><b>Real sentences</b><p>Every dot on the map is a real sentence taken from a public translation dataset, in English, Hindi or Marathi. A filter hides unsuitable words so the map stays clean.</p><div class="fmore" hidden><div class="fx"><span>🌍 Real-world example</span>Think of a phrasebook that a traveller carries: the same idea written in three languages, line by line. This map is built from thousands of such lines, so the dots are real everyday language, not examples invented by the developer.</div><div class="fx"><span>🎓 If your teacher asks</span>Using real parallel (translated) data makes the map trustworthy, because the neighbours you see are formed by actual language use. It is a good point to mention when your teacher asks about the data source.</div></div><div class="fhint">Tap to see an example ▾</div></div>
+        <div class="fact" tabindex="0" role="button" aria-expanded="false"><div class="fe">🗺️</div><b>Squashed to 3D</b><p>384 numbers are too many to draw, so a method called UMAP squashes them down to 3 so we can see them. Distances are therefore approximate, and your dot sits at the average of its 8 nearest sentences.</p><div class="fmore" hidden><div class="fx"><span>🌍 Real-world example</span>It is like flattening the round Earth onto a paper map: Greenland looks bigger than it really is, but cities that are close in real life still look close on the paper. In the same way, close dots on this map really are similar in meaning.</div><div class="fx"><span>🎓 If your teacher asks</span>UMAP is a dimensionality-reduction technique. It tries to keep neighbouring points together while reducing 384 dimensions to 3, which is why shape and clusters matter more than exact distances.</div><button type="button" class="tryit" data-try="find">Try it: find my dot</button></div><div class="fhint">Tap to see an example ▾</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="style">
+    <h2>Style</h2>
+    <p class="note">Rewrite your sentence in a new style. Each orange dot in the galaxy is one rewrite.</p>
+    <textarea id="sinp" aria-label="Your sentence for Style">I am going to the market to buy vegetables.</textarea>
+    <div class="gbtns"><button id="sGo" disabled>Send it through</button></div>
+    <div id="sStatus" class="note" style="margin-top:10px">Loading the meaning model... Style works as soon as it is ready.</div>
+    <div class="box"><b>Your sentence:</b> <span id="sOrig">(press "Send it through" above)</span></div>
+    <div id="sliders"></div>
+    <div class="box">
+      <div class="hint">Rewrite</div>
+      <div class="q" id="sOut">Move any slider left or right.</div>
+      <div class="hint" id="sNotes"></div>
+      <div class="meter"><div id="sBar"></div></div>
+      <div class="ginfo" id="sScore"></div>
+    </div>
+    <div class="gbtns"><button class="ghost" id="sClear">Clear trail</button></div>
+    <div class="box" id="sTrail" hidden></div>
+  </section>
+
+  <section class="panel" id="guess">
+    <h2>Guess My Word</h2>
+    <button id="gStart" disabled>Start game</button>
+    <button class="ghost" id="bList" type="button" disabled>See the word list</button>
+    <div class="box" id="listBox" hidden><input type="text" id="listQ" placeholder="search a word" aria-label="Search the word list"><span class="note" id="listN" style="margin-left:10px"></span><div id="listWords" style="max-height:260px;overflow:auto;margin-top:8px;column-width:130px;font-size:.9rem"></div></div>
+    <div id="gMsg" class="note">Loading the word list...</div>
+    <div class="box" id="gBox" hidden>
+      <div class="hint" id="gKind"></div>
+      <div class="q" id="gQ"></div>
+      <div class="hint" id="gHint"></div>
+      <div class="gbtns" id="gOpts"></div>
+      <div class="gbtns">
+        <button class="yes" id="bYes">Yes</button>
+        <button class="no" id="bNo">No</button>
+        <button class="ghost" id="bMaybe">Not sure</button>
+        <button class="ghost" id="bUndo">Undo</button>
+        <button class="ghost" id="bQuit">Quit</button>
+      </div>
+      <div class="ginfo" id="gInfo"></div>
+      <div id="gStuck" hidden>
+        <div class="gbtns"><input type="text" id="gWord" placeholder="type your word" aria-label="Your word"><button id="bWhy">Why did I fail?</button></div>
+        <div class="note" id="gWhy"></div>
+      </div>
+    </div>
+    <div id="gameSlot"></div>
+    <div class="box" id="gLogBox" hidden></div>
+    <button class="ghost" id="bHow" type="button">How it works</button>
+    <div class="box" id="howBox" hidden></div>
+
+    
+  </section>
+</main>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { AutoTokenizer, pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2";
+
+/* ============ MODULE 1: TOKEN TAX ============ */
+const MODELS = [
+  { name: "GPT-2 (BPE)", id: "Xenova/gpt2", color: "#22d3ee" },
+  { name: "BERT (WordPiece)", id: "Xenova/bert-base-multilingual-cased", color: "#a78bfa" },
+  { name: "XLM-R (SentencePiece)", id: "Xenova/xlm-roberta-base", color: "#f472b6" }
+];
+const LANGS = [
+  ["English", "I am going to the market to buy vegetables."],
+  ["Hindi", "मैं सब्जियां खरीदने बाजार जा रहा हूं।"],
+  ["Marathi", "मी भाजी घेण्यासाठी बाजारात जात आहे."]
+];
+const $ = id => document.getElementById(id);
+const tokenizers = [];
+
+function words(t) { return t.trim().split(/\s+/).filter(Boolean).length || 1; }
+function count(tok, text) { return tok.tokenize(text).length; }
+function clean(t) { return t.replace(/^(Ġ|▁)/, "·"); }
+
+function bar(label, value, max, color, extra) {
+  const d = document.createElement("div");
+  d.className = "bar";
+  d.innerHTML = `<span></span><div><div class="fill"></div></div><span></span>`;
+  d.children[0].textContent = label;
+  const f = d.querySelector(".fill");
+  f.style.width = Math.max(2, (value / max) * 100) + "%";
+  f.style.background = color; f.style.color = color;
+  d.children[2].textContent = extra;
+  return d;
+}
+
+const TAXCOL = { English: "#22d3ee", Hindi: "#f472b6", Marathi: "#a78bfa" };
+function taxVisuals(table) {
+  const mk = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+  // 1. big tax numbers
+  const cards = $("taxcards"); cards.innerHTML = "";
+  table.slice(1).forEach(([n, cs]) => {
+    const g = mk("div", "group"), t = mk("div"); t.textContent = n + " compared with English"; t.style.fontWeight = "600"; g.appendChild(t);
+    const grid = mk("div", "cards3");
+    cs.forEach((c, i) => {
+      const base = table[0][1][i], x = c / base;
+      const col = x < 1.5 ? "#34d399" : x < 2.5 ? "#fbbf24" : "#f87171";
+      const d = mk("div", "taxcard");
+      d.innerHTML = '<div class="tn"></div><div class="tx"></div><div class="gauge"><div></div></div><div class="td"></div>';
+      d.children[0].textContent = MODELS[i].name; d.children[0].style.color = MODELS[i].color;
+      d.children[1].textContent = x.toFixed(1) + "x"; d.children[1].style.color = col;
+      const f = d.children[2].firstChild; f.style.width = Math.max(2, Math.min(100, x / 5 * 100)) + "%"; f.style.background = col;
+      d.children[3].textContent = `${c} tokens vs ${base} in English. If English costs ₹10, this costs about ₹${(10 * x).toFixed(0)}.`;
+      grid.appendChild(d);
+    });
+    g.appendChild(grid); cards.appendChild(g);
+  });
+}
+
+const SAMPLE_EN = "I am going to the market to buy vegetables.";
+const SAMPLE_TR = { hi: "मैं सब्जियां खरीदने बाजार जा रहा हूं।", mr: "मी भाजी घेण्यासाठी बाजारात जात आहे." };
+const trCache = new Map();
+async function fetchJSON(url) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 10000);
+  try { const r = await fetch(url, { signal: ctl.signal }); if (!r.ok) throw new Error("HTTP " + r.status); return await r.json(); }
+  finally { clearTimeout(timer); }
+}
+const hasDev = t => /[\u0900-\u097F]/.test(t);
+const latinLeft = t => /[A-Za-z]/.test(t.replace(/[A-Za-z]*\d[A-Za-z\d]*/g, ""));
+const decodeEnt = t => { const x = document.createElement("textarea"); x.innerHTML = t; return x.value; };
+// any English word the translator left behind is converted to Devanagari letters (Google Input Tools), so the result is fully Hindi / Marathi
+async function devanagariOnly(t, lang) {
+  const words = [...new Set(t.match(/[A-Za-z]+/g) || [])];
+  for (const w of words) {
+    try {
+      const j = await fetchJSON("https://inputtools.google.com/request?itc=" + lang + "-t-i0-und&num=1&text=" + encodeURIComponent(w));
+      const r = j && j[0] === "SUCCESS" && j[1][0][1][0];
+      if (r && hasDev(r)) t = t.replace(new RegExp("\\b" + w + "\\b", "g"), r);
+    } catch (e) { /* leave it */ }
+  }
+  return t;
+}
+async function translateOne(text, lang) {
+  const key = lang + "|" + text;
+  if (trCache.has(key)) return trCache.get(key);
+  if (text === SAMPLE_EN) return SAMPLE_TR[lang];
+  const services = [
+    async () => { const j = await fetchJSON("https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" + lang + "&dt=t&q=" + encodeURIComponent(text)); return j[0].map(x => x[0]).join(""); },
+    async () => { const j = await fetchJSON("https://lingva.ml/api/v1/en/" + lang + "/" + encodeURIComponent(text)); return j.translation; },
+    async () => { const j = await fetchJSON("https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) + "&langpair=en|" + lang); return Number(j.responseStatus) === 200 ? j.responseData.translatedText : ""; }
+  ];
+  let best = "";
+  for (const svc of services) {
+    let out = "";
+    try { out = decodeEnt(String(await svc() || "")).trim(); } catch (e) { continue; }
+    if (!out || !hasDev(out) || /MYMEMORY WARNING|INVALID/i.test(out)) continue;
+    if (!latinLeft(out)) { best = out; break; }          // pure Hindi / Marathi: done
+    if (!best) best = out;                                // keep as a fallback and try the next service
+  }
+  if (!best) throw new Error("translation failed");
+  if (latinLeft(best)) best = (await devanagariOnly(best, lang)).replace(/\s+/g, " ").trim();
+  trCache.set(key, best);
+  return best;
+}
+
+let runId = 0;
+async function run() {
+  const text = $("inp").value.trim();
+  if (!text) { $("status").textContent = "Type a sentence first."; return; }
+  const myRun = ++runId;
+  $("ginp").value = text; $("sinp").value = text;
+  const w = words(text);
+  const chips = $("chips"), mine = $("mine");
+  chips.innerHTML = ""; mine.innerHTML = "";
+  const counts = [];
+  MODELS.forEach((m, i) => {
+    const toks = tokenizers[i].tokenize(text);
+    counts.push(toks.length);
+    const row = document.createElement("div"); row.className = "row";
+    const head = document.createElement("div"); head.className = "rowhead";
+    head.innerHTML = `<b style="color:${m.color}"></b><span></span>`;
+    head.children[0].textContent = m.name;
+    head.children[1].textContent = `${toks.length} tokens, fertility ${(toks.length / w).toFixed(2)}`;
+    const box = document.createElement("div"); box.className = "chips";
+    toks.forEach((t, j) => {
+      const c = document.createElement("span"); c.className = "chip";
+      const h = (j * 47) % 360;
+      c.style.background = `hsla(${h},80%,60%,.15)`; c.style.borderColor = `hsla(${h},80%,60%,.6)`;
+      c.textContent = clean(t); box.appendChild(c);
+    });
+    row.append(head, box); chips.appendChild(row);
+  });
+  const mx = Math.max(...counts);
+  MODELS.forEach((m, i) => mine.appendChild(bar(m.name, counts[i], mx, m.color, `${counts[i]} tokens`)));
+  $("status").textContent = "";
+  placeInGalaxy(text);
+
+  // ---- Token Tax: translate the English sentence into Hindi and Marathi ----
+  const trBox = $("trans"), L = $("langs");
+  trBox.innerHTML = "";
+  const showLines = (hi, mr, note) => {
+    trBox.innerHTML = "";
+    [["English", text], ["Hindi", hi], ["Marathi", mr]].forEach(([n, t]) => {
+      const d = document.createElement("div"); d.style.marginTop = "6px";
+      const b = document.createElement("b"); b.textContent = n + ": "; b.style.color = TAXCOL[n];
+      d.appendChild(b); d.appendChild(document.createTextNode(t)); trBox.appendChild(d);
+    });
+    if (note) { const d = document.createElement("div"); d.className = "note"; d.style.marginTop = "8px"; d.textContent = note; trBox.appendChild(d); }
+  };
+  let hi, mr;
+  if (text === SAMPLE_EN) { hi = SAMPLE_TR.hi; mr = SAMPLE_TR.mr; }
+  else {
+    const d = document.createElement("div"); d.className = "note"; d.textContent = "Translating your sentence into Hindi and Marathi..."; trBox.appendChild(d);
+    L.innerHTML = ""; $("taxcards").innerHTML = "";
+    try { [hi, mr] = await Promise.all([translateOne(text, "hi"), translateOne(text, "mr")]); }
+    catch (e) {
+      if (myRun !== runId) return;
+      trBox.innerHTML = "";
+      const d2 = document.createElement("div"); d2.className = "note";
+      d2.textContent = "Could not translate right now. Check your internet connection and press Send it through again.";
+      trBox.appendChild(d2);
+      return;
+    }
+  }
+  if (myRun !== runId) return;   // a newer run has started
+  showLines(hi, mr);
+
+  const langs = [["English", text], ["Hindi", hi], ["Marathi", mr]];
+  const table = langs.map(([n, s]) => [n, MODELS.map((_, i) => count(tokenizers[i], s))]);
+  const big = Math.max(...table.flatMap(r => r[1]));
+  L.innerHTML = "";
+  MODELS.forEach((m, i) => {
+    const g = document.createElement("div"); g.className = "group";
+    const t = document.createElement("div"); t.textContent = m.name; t.style.fontWeight = "600"; t.style.color = m.color; g.appendChild(t);
+    const bars = document.createElement("div"); bars.className = "bars";
+    table.forEach(([n, cs]) => {
+      const base = table[0][1][i];
+      bars.appendChild(bar(n, cs[i], big, TAXCOL[n], `${cs[i]} (${(cs[i] / base).toFixed(1)}x)`));
+    });
+    g.appendChild(bars); L.appendChild(g);
+  });
+  taxVisuals(table);
+}
+
+/* ============ MODULE 2: GALAXY OF MEANING ============ */
+const D = 384;
+const LCOL = { en: "#22d3ee", hi: "#f472b6", mr: "#a78bfa", hg: "#fbbf24", w: "#34d399" };
+const LNAME = { en: "English", hi: "Hindi", mr: "Marathi", hg: "Hinglish (auto-romanized)", w: "English word" };
+function setLegend(inGame) {
+  $("legend").innerHTML = ["en", "hi", "mr"].map(k =>
+    `<span><span class="dot" style="background:${LCOL[k]};color:${LCOL[k]}"></span>${LNAME[k]}</span>`).join("")
+    + (inGame ? "" : `<span><span class="dot" style="background:#fff;color:#fff"></span>Your sentence</span>`);
+}
+setLegend(false);
+const hiddenType = d => d.l === "hg" || d.l === "w";   // not shown in the Galaxy of Words (only English, Hindi, Marathi)
+
+// Safety filter: any sentence pair whose English text contains one of these words is hidden from the galaxy
+const BADRE = /\b(sex|sexual|sexy|porn|porno|rape|raped|rapist|murder|murdered|suicide|fuck|fucking|fucked|shit|bitch|bastard|dick|penis|vagina|naked|nude|whore|slut|terrorist|terrorism|bomb|bombs|cocaine|heroin|genocide|massacre|abuse|abused|asshole|ass|damn|crap|prostitute|prostitutes|kill|killed|killing|corpse)\b/i;
+let BAD = new Set();
+const isBad = d => d.l !== "w" && d.l !== "hg" && BAD.has(d.p);
+
+let G = null;            // galaxy data
+let embedder = null;     // in-browser embedding model
+let scene, camera, renderer, controls, points, userMarker, pairLines;
+let fly = null, baseRGB = null, ansMarker = null, lastText = "";
+const byPair = new Map();
+
+function glowTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(.25, "rgba(255,255,255,.8)");
+  r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+async function initGalaxy() {
+  const [data, buf] = await Promise.all([
+    fetch("galaxy.json").then(r => { if (!r.ok) throw new Error("galaxy.json not found"); return r.json(); }),
+    fetch("embeddings.bin").then(r => { if (!r.ok) throw new Error("embeddings.bin not found"); return r.arrayBuffer(); })
+  ]);
+  const emb = new Int8Array(buf);
+  if (emb.length !== data.length * D) throw new Error("embeddings.bin does not match galaxy.json");
+  G = { data, emb, n: data.length };
+  data.forEach((d, i) => { if (!byPair.has(d.p)) byPair.set(d.p, []); byPair.get(d.p).push(i); });
+  BAD = new Set(data.filter(d => d.l === "en" && BADRE.test(d.t)).map(d => d.p));
+
+  const wrap = $("gwrap"), canvas = $("gcanvas");
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x03050c);
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000);
+  camera.position.set(0, 0, 260);
+  controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 0.6;
+  controls.addEventListener("start", () => { controls.autoRotate = false; fly = null; });
+
+  // easier zoom: faster wheel/pinch zoom, wide range, and + / - / reset buttons
+  controls.zoomSpeed = 2; controls.minDistance = 4; controls.maxDistance = 700;
+  const zoomBy = f => {
+    fly = null; controls.autoRotate = false;
+    const d = camera.position.clone().sub(controls.target);
+    d.setLength(Math.min(controls.maxDistance, Math.max(controls.minDistance, d.length() * f)));
+    camera.position.copy(controls.target).add(d);
+  };
+  $("zin").onclick = () => zoomBy(0.6);
+  $("zout").onclick = () => zoomBy(1.6);
+  $("zreset").onclick = () => {
+    controls.autoRotate = false;
+    fly = { t: 0, fromT: controls.target.clone(), toT: new THREE.Vector3(), fromC: camera.position.clone(), toC: new THREE.Vector3(0, 0, 260) };
+  };
+
+  const pos = new Float32Array(G.n * 3), col = new Float32Array(G.n * 3);
+  baseRGB = new Float32Array(G.n * 3);
+  data.forEach((d, i) => {
+    pos.set([d.x, d.y, d.z], i * 3);
+    const c = new THREE.Color(LCOL[d.l] || "#ffffff");
+    baseRGB.set([c.r, c.g, c.b], i * 3);
+    col.set([c.r * 0.9, c.g * 0.9, c.b * 0.9], i * 3);
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  points = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 4, map: glowTexture(), vertexColors: true, transparent: true,
+    depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true
+  }));
+  scene.add(points);
+
+  // your sentence: same size as the other dots, only the colour (white) is different
+  userMarker = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture(), color: 0xffffff, depthTest: false, transparent: true, blending: THREE.AdditiveBlending
+  }));
+  userMarker.scale.set(4, 4, 1); userMarker.visible = false; userMarker.renderOrder = 10;
+  scene.add(userMarker);
+  ansMarker = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture(), color: 0xfbbf24, depthTest: false, transparent: true, blending: THREE.AdditiveBlending
+  }));
+  ansMarker.scale.set(6, 6, 1); ansMarker.visible = false; ansMarker.renderOrder = 11;
+  scene.add(ansMarker);
+
+  const resize = () => {
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  };
+  new ResizeObserver(resize).observe(wrap); resize();
+
+  setupPicking(canvas, wrap);
+  let last = performance.now();
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    if (fly) {
+      fly.t = Math.min(1, fly.t + dt / 1.4);
+      const k = 1 - Math.pow(1 - fly.t, 3);
+      controls.target.lerpVectors(fly.fromT, fly.toT, k);
+      camera.position.lerpVectors(fly.fromC, fly.toC, k);
+      if (fly.t >= 1) fly = null;
+    }
+    controls.update();
+    const lab = $("ulabel");
+    if (userMarker.visible) {
+      const v = userMarker.position.clone().project(camera);
+      if (v.z < 1 && wrap.clientWidth > 0) {
+        lab.style.display = "block";
+        lab.style.left = ((v.x * 0.5 + 0.5) * wrap.clientWidth) + "px";
+        lab.style.top = ((-v.y * 0.5 + 0.5) * wrap.clientHeight - 22) + "px";
+      } else lab.style.display = "none";
+    } else lab.style.display = "none";
+    renderer.render(scene, camera);
+  })(last);
+
+  applyFade();
+  $("gstatus").textContent = `Galaxy ready: ${G.n} sentences. Loading the meaning model so your own sentence can join...`;
+}
+
+function setupPicking(canvas, wrap) {
+  const ray = new THREE.Raycaster(); ray.params.Points.threshold = 2;
+  const tip = $("tip"); let down = null, busy = false;
+  function pick(e) {
+    const r = canvas.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const hit = ray.intersectObject(points).find(h => { const d = G.data[h.index]; return !isBad(d) && !hiddenType(d); });
+    return hit ? hit.index : -1;
+  }
+  canvas.addEventListener("pointermove", e => {
+    if (busy) return; busy = true;
+    requestAnimationFrame(() => {
+      busy = false;
+      const i = pick(e);
+      if (i < 0) { tip.style.display = "none"; return; }
+      const d = G.data[i], r = wrap.getBoundingClientRect();
+      tip.textContent = `${LNAME[d.l]}: ${d.t}`;
+      tip.style.left = Math.min(e.clientX - r.left + 12, r.width - 200) + "px";
+      tip.style.top = (e.clientY - r.top + 12) + "px"; tip.style.display = "block";
+    });
+  });
+  canvas.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+  canvas.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
+  canvas.addEventListener("pointerup", e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const i = pick(e); if (i >= 0) showPair(i);
+  });
+}
+
+function showPair(i) {
+  const idx = byPair.get(G.data[i].p), box = $("pairinfo");
+  box.innerHTML = "<b>Same sentence in other languages (lines drawn in the galaxy):</b>";
+  const verts = [];
+  idx.forEach(j => {
+    if (isBad(G.data[j])) return;
+    if (hiddenType(G.data[j])) return;
+    const d = G.data[j], row = document.createElement("div"); row.className = "nnrow";
+    const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = LNAME[d.l];
+    tag.style.color = LCOL[d.l]; tag.style.borderColor = LCOL[d.l];
+    const tx = document.createElement("span"); tx.textContent = d.t;
+    row.append(tag, tx); box.appendChild(row);
+    if (j !== i) verts.push(G.data[i].x, G.data[i].y, G.data[i].z, d.x, d.y, d.z);
+  });
+  if (pairLines) { scene.remove(pairLines); pairLines.geometry.dispose(); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+  pairLines = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
+  scene.add(pairLines);
+}
+
+function flyTo(p, dist = 45) {
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  fly = { t: 0, fromT: controls.target.clone(), toT: p.clone(), fromC: camera.position.clone(), toC: p.clone().add(dir.multiplyScalar(dist)) };
+  controls.autoRotate = false;
+}
+
+// where does an embedding belong in the 3D galaxy? (weighted average of its 8 nearest dots)
+function locate(v) {
+  const K = 8, sims = new Float32Array(G.n);
+  for (let i = 0; i < G.n; i++) {
+    if (hiddenType(G.data[i]) || isBad(G.data[i])) { sims[i] = -2; continue; }
+    let s = 0; const o = i * D;
+    for (let k = 0; k < D; k++) s += v[k] * G.emb[o + k];
+    sims[i] = s / 127;
+  }
+  const top = Array.from(sims.keys()).sort((a, b) => sims[b] - sims[a]).slice(0, K);
+  let wsum = 0, x = 0, y = 0, z = 0;
+  top.forEach(i => { const w = Math.exp((sims[i] - sims[top[0]]) * 20); wsum += w; x += w * G.data[i].x; y += w * G.data[i].y; z += w * G.data[i].z; });
+  return { p: new THREE.Vector3(x / wsum, y / wsum, z / wsum), sims, top };
+}
+
+async function placeInGalaxy(text) {
+  if (!G || !embedder) { $("gstatus").textContent = "The galaxy is still loading. It will place your sentence automatically when ready."; return; }
+  $("gstatus").textContent = "Embedding your sentence...";
+  const out = await embedder(text, { pooling: "mean", normalize: true });
+  const v = out.data;
+  const { p } = locate(v);
+  lastText = text; userMarker.position.copy(p); userMarker.visible = true; flyTo(p, 70);
+
+  $("gHow").hidden = false;
+  $("gstatus").textContent = "Your sentence is the white dot. Cannot see it? Press 'Search my dot'.";
+  styleSet(text, v, p);
+}
+
+/* ============ MODULE 3: TEXT STYLE DIAL ============ */
+const AX = ["formality", "politeness", "positivity", "simplicity", "certainty", "wordiness", "excitement"];
+// order the rules run in when several sliders are moved: word swaps first, sentence wrappers last
+const ORDER = ["simplicity", "positivity", "formality", "certainty", "politeness", "excitement", "wordiness"];
+const norm = s => s.replace(/[\u2018\u2019]/g, "'");
+const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const cap1 = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+function matchCase(src, rep) { return /^[A-Z]/.test(src) && /^[a-z]/.test(rep) ? cap1(rep) : rep; }
+// replace whole words/phrases in ONE pass (so one replacement can never be replaced again)
+function applyMap(text, pairs, needNext) {
+  const map = new Map(pairs.map(([a, b]) => [a.toLowerCase(), b]));
+  const keys = [...map.keys()].sort((a, b) => b.length - a.length).map(esc);
+  const re = new RegExp("(?<![A-Za-z'])(" + keys.join("|") + ")(?![A-Za-z'])" + (needNext ? "(?=\\s+[A-Za-z])" : ""), "gi");
+  return text.replace(re, m => matchCase(m, map.get(m.toLowerCase())));
+}
+function fixArticles(s) {
+  return s.replace(/\b(a|an)(\s+)([A-Za-z]+)/gi, (m, a, sp, w) => {
+    const l = w.toLowerCase();
+    const vowel = (/^[aeiou]/.test(l) && !/^(uni|use|eu|one|ubi)/.test(l)) || /^(hour|honest|heir)/.test(l);
+    const art = vowel ? "an" : "a";
+    return (a[0] === "A" ? cap1(art) : art) + sp + w;
+  });
+}
+const sentenceCase = s => s.replace(/(^|[.!?]\s+)([a-z])/g, (m, a, b) => a + b.toUpperCase());
+const tidy = s => s.replace(/\s+/g, " ").replace(/\s+([.,!?])/g, "$1").trim();
+
+const IMPER = new Set("please kindly give bring send tell show help open close pass take call come wait check look let make get buy fix move stop answer sit stand put turn read write find leave keep hold use try follow listen watch say speak explain describe repeat clean cook wash return".split(" "));
+const LOWERABLE = new Set("the a an this that these those it there he she we they you my your our his her their what where when why how who which do does did is are was were will would can could should and but so if am".split(" "));
+const isQuestion = (core, end) => end.includes("?") || /^(can|could|will|would|do|does|did|is|are|was|were|should|what|where|when|why|how|who|which)\b/i.test(core);
+const isImperative = core => IMPER.has(core.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, ""));
+/* ---- helpers shared by every slider ---- */
+const A = Math.abs;
+const pickN = (arr, st, ax, k) => arr[(hash(st.seed + "|" + ax) + (k || 0)) % arr.length];
+const COMMON_START = new Set(("the a an this that these those my our your his her their its there here today yesterday tomorrow tonight now then soon later some many most all every each no one two three four five few several both either neither after before when while if because although though since during students people children kids teachers women men boys girls friends parents farmers workers everyone everybody someone nobody nothing everything it we they you he she what where when why how who which do does did is are was were will would can could should and but so").split(" "));
+function lowerFirst(s) {
+  const m = s.match(/^[A-Za-z']+/); if (!m) return s;
+  const w = m[0], l = w.toLowerCase();
+  if (w === "I" || w.startsWith("I'")) return s;
+  return (COMMON_START.has(l) || IMPER.has(l) || LOWERABLE.has(l)) ? w[0].toLowerCase() + s.slice(1) : s;
+}
+const sType = (core, end) => isQuestion(core, end) ? "q" : (isImperative(core) ? "i" : "s");
+// add one phrase before and/or after the sentence. Only one opener is used; extra sliders add their phrase at the end instead
+function frame(st, ax, pre, post, both) {
+  let usedPre = false;
+  if (pre && pre.length && !st.pre.length) { st.pre.push(pickN(pre, st, ax)); usedPre = true; }
+  if (post && post.length && (both || !usedPre)) st.post.push(pickN(post, st, ax, 3));
+  else if (!usedPre && pre && pre.length) st.pre.push(pickN(pre, st, ax));
+  st.framed[ax] = true;
+}
+const swap = (st, ax, pairs, extra) => { const o = st.core; let t = applyMap(st.core, pairs); if (extra) t = extra(t); st.core = t; if (t !== o) st.swapped[ax] = true; return t !== o; };
+
+/* ---- FORMALITY ---- */
+const CONTR = [["do not","don't"],["does not","doesn't"],["did not","didn't"],["is not","isn't"],["are not","aren't"],["was not","wasn't"],["were not","weren't"],
+  ["would not","wouldn't"],["could not","couldn't"],["should not","shouldn't"],["have not","haven't"],["has not","hasn't"],["had not","hadn't"],
+  ["cannot","can't"],["will not","won't"],["I am","I'm"],["you are","you're"],["we are","we're"],["they are","they're"],["it is","it's"],["that is","that's"],
+  ["what is","what's"],["there is","there's"],["he is","he's"],["she is","she's"],["I will","I'll"],["we will","we'll"],["you will","you'll"],["they will","they'll"],
+  ["I have","I've"],["we have","we've"],["they have","they've"],["you have","you've"],["I would","I'd"],["let us","let's"]];
+const EXPAND = CONTR.map(([a, b]) => [b, a]);
+const FORMAL_W = [["gonna","going to"],["wanna","want to"],["gotta","have to"],["kids","children"],["kid","child"],["yeah","yes"],["yep","yes"],["nope","no"],["okay","all right"],["ok","all right"],
+  ["hi","hello"],["hey","hello"],["thanks","thank you"],["stuff","items"],["a lot of","a great deal of"],["lots of","a great deal of"],["kind of","somewhat"],["sort of","somewhat"],
+  ["cheap","inexpensive"],["dad","father"],["mom","mother"],["mum","mother"],["buy","purchase"],["bought","purchased"],["help","assist"],["helps","assists"],
+  ["start","commence"],["started","commenced"],["begin","commence"],["finish","complete"],["need","require"],["needs","requires"],
+  ["tell","inform"],["told","informed"],["give","provide"],["gave","provided"],["use","utilize"],["try","attempt"],["tried","attempted"],["enough","sufficient"],
+  ["also","additionally"],["job","occupation"],["house","residence"],["doctor","physician"],["car","automobile"],["phone","telephone"],["bike","bicycle"],["movie","film"],
+  ["market","marketplace"],["big","large"],["really","truly"],["very","exceedingly"],["soon","shortly"],["now","at present"],["later","subsequently"],["maybe","perhaps"],
+  ["i think","I believe"],["we think","we believe"],["find out","ascertain"],["look at","examine"],["look for","seek"],["come back","return"],["go back","return"],["talk to","speak with"],
+  ["ask for","request"],["put off","postpone"],["set up","establish"],["pick up","collect"],["eat","consume"],
+  ["to start","to commence"],["tell me","inform me"],
+  ["says","states"],["said","stated"],["talk","converse"],["talked","conversed"],["want to","wish to"],["wants to","wishes to"],];
+const CASUAL_W = [["children","kids"],["child","kid"],["hello","hey"],["yes","yeah"],["thank you","thanks"],["purchase","buy"],["purchased","bought"],["father","dad"],["mother","mom"],
+  ["require","need"],["requires","needs"],["very","super"],["a great deal of","lots of"],["inexpensive","cheap"],["large","big"],["sufficient","enough"],["approximately","around"],["however","but"],
+  ["therefore","so"],["believe","think"],["commence","start"],["inform","tell"],["want to","wanna"],["vegetables","veggies"],["to buy","to grab"],["to eat","to munch on"],["residence","place"],
+  ["automobile","car"],["attempt","try"],["assist","help"],["inquire","ask"],["obtain","get"],["additionally","also"],["excellent","awesome"],["great","awesome"],["wonderful","awesome"],["television","TV"],
+  ["telephone","phone"],["bicycle","bike"],["physician","doctor"],["consume","eat"],["complete","finish"],["finished","done"],["difficult","tough"],["tired","beat"],["money","cash"],["friend","buddy"],["friends","buddies"],
+  ["extremely","really"],["really","totally"],["because","cuz"],["going to the","heading to the"],["going to","gonna"],["is going to","is gonna"],["lots","tons"],["many","tons of"],["rapidly","fast"]];
+const MOTION = /\b(am|is|are|was|were) going to (?=(?:the|a|an|my|our|your|his|her|their|this|that|school|work|town|home|college|office)\b)/gi;
+function formality(st, lv) {
+  const o = st.core;
+  if (lv > 0) {
+    let t = applyMap(applyMap(st.core, EXPAND), FORMAL_W);
+    t = t.replace(MOTION, (m, a) => a + " proceeding to ");
+    st.core = t; if (t !== o) st.swapped.formality = true;
+    if (A(lv) === 2 || t === o) {
+      if (st.type === "q") frame(st, "formality", ["May I ask,", "Might I enquire,", "I would like to ask,"], ["|I would appreciate your reply."], A(lv) === 2);
+      else if (st.type === "i") frame(st, "formality", ["Kindly", "You are requested to"], [", at your earliest convenience"], A(lv) === 2);
+      else frame(st, "formality", ["I wish to state that", "It may be stated that", "Please be advised that", "For the record,"], [", as stated formally", "|This is submitted for your kind consideration."], A(lv) === 2);
+    }
+  } else {
+    let t = applyMap(st.core, CASUAL_W);
+    t = t.replace(/\bgoing to (?!the\b|a\b|an\b|my\b|your\b|his\b|her\b|our\b|their\b|this\b|that\b|school\b|work\b|bed\b|town\b|home\b)/gi, m => matchCase(m, "gonna "));
+    t = applyMap(t, CONTR, true);
+    st.core = t; if (t !== o) st.swapped.formality = true;
+    if (A(lv) === 2 || t === o) {
+      if (st.type === "q") frame(st, "formality", ["Hey,", "Quick question:", "So,"], [", or what"], A(lv) === 2);
+      else if (st.type === "i") frame(st, "formality", ["Hey,", "Okay,", "Just"], [", alright"], A(lv) === 2);
+      else frame(st, "formality", ["So,", "Well,", "Okay,", "Alright,", "Honestly,", "Okay so basically,"], [", you know", ", y'know", ", haha", ", right"], A(lv) === 2);
+    }
+  }
+}
+
+/* ---- POLITENESS ---- */
+function politeness(st, lv) {
+  const o = st.core;
+  if (lv > 0) {
+    let t = st.core.replace(/^(can|will) you\b/i, (x, a) => a.toLowerCase() === "can" ? "Could you please" : "Would you please")
+      .replace(/^i want\b/i, "I would like").replace(/\bI want\b/g, "I would like");
+    st.core = t; if (t !== o) st.swapped.politeness = true;
+    if (st.type === "q") {
+      if (/please/i.test(t)) { if (A(lv) === 2) frame(st, "politeness", null, ["|Thank you so much."], true); }
+      else frame(st, "politeness", ["Excuse me,", "Pardon me,", "Sorry to bother you,"], [", please", ", if you do not mind"], A(lv) === 2);
+    } else if (st.type === "i") {
+      if (!/\bplease\b|\bkindly\b/i.test(t)) { st.core = "could you please " + lowerFirst(t); st.end = "?"; st.swapped.politeness = true; if (A(lv) === 2) frame(st, "politeness", null, ["|Thank you very much."], true); }
+      else frame(st, "politeness", null, A(lv) === 2 ? [", thank you so much"] : [", thank you"], true);
+    } else {
+      frame(st, "politeness", ["With respect,", "If I may say so,", "I would like to mention that", "Just to let you know politely,", "Kindly note that"], [", if that is alright with you", ", if you do not mind", ", if I may", ", with your kind permission", ", thank you"], A(lv) === 2);
+      if (A(lv) === 2) st.post.push("|Thank you for listening.");
+    }
+  } else {
+    if (/^(could|would|can|will) you\b/i.test(st.core)) { st.type = "i"; st.end = "."; }
+    let t = st.core.replace(/\b(Could|Would|Can|Will) you (please )?([^?]+)$/i, (m, a, b, c) => cap1(c))
+      .replace(/\b(Please note that|If I may say so,|Excuse me,|Sorry,|Pardon me,|With respect,|Kindly note that)\s*/gi, "")
+      .replace(/\b(thank you|thanks)[.!]?/gi, "").replace(/\bplease,?\s*/gi, "").replace(/\bkindly\s+/gi, "")
+      .replace(/\bI would like\b/g, "I want").replace(/\bwould like to\b/g, "want to");
+    t = tidy(t); st.core = t; if (t !== o) st.swapped.politeness = true;
+    if (st.type === "q") frame(st, "politeness", ["Look,", "Come on,", "Tell me,"], ["|Answer me."], A(lv) === 2);
+    else if (st.type === "i") { frame(st, "politeness", ["Now,", "Just"], ["|Now."], A(lv) === 2); st.end = "."; }
+    else frame(st, "politeness", ["Look,", "Listen,", "Just so you know,", "Frankly,", "Whatever you say,"], ["|That is it.", "|End of story."], A(lv) === 2);
+  }
+}
+
+/* ---- POSITIVITY ---- */
+const TO_POS = [["not bad","excellent"],["not good","great"],["bad","good"],["terrible","wonderful"],["awful","great"],["horrible","lovely"],["worst","best"],["worse","better"],
+  ["hate","love"],["hates","loves"],["hated","loved"],["sad","happy"],["boring","exciting"],["ugly","beautiful"],["difficult","easy"],["problem","opportunity"],["problems","opportunities"],
+  ["angry","calm"],["tired","energetic"],["sick","healthy"],["dirty","clean"],["dangerous","safe"],["expensive","affordable"],["slow","quick"],["fail","succeed"],
+  ["failed","succeeded"],["wrong","right"],["never","always"],["nothing","everything"],["no one","everyone"],["good","great"],["nice","wonderful"],["okay","great"],["fine","wonderful"],
+  ["happy","delighted"],["glad","thrilled"],["interesting","fascinating"],["I like","I love"],["we like","we love"],["you like","you love"],["they like","they love"],
+  ["vegetables","fresh vegetables"],["fruits","juicy fruits"],["market","lively market"],["weather","lovely weather"],["day","wonderful day"],["morning","bright morning"],
+  ["food","tasty food"],["trip","delightful trip"],["journey","pleasant journey"]];
+const TO_NEG = [["good","bad"],["great","terrible"],["wonderful","awful"],["lovely","horrible"],["best","worst"],["better","worse"],["love","hate"],["loves","hates"],["loved","hated"],
+  ["happy","sad"],["exciting","boring"],["beautiful","ugly"],["easy","difficult"],["opportunity","problem"],["opportunities","problems"],["calm","angry"],["healthy","sick"],["clean","dirty"],
+  ["safe","dangerous"],["affordable","expensive"],["quick","slow"],["fast","slow"],["warm","cold"],["succeed","fail"],["succeeded","failed"],["always","never"],["everything","nothing"],
+  ["everyone","no one"],["nice","unpleasant"],["delicious","disgusting"],["excellent","poor"],["glad","upset"],["delighted","upset"],["fascinating","dull"],["interesting","dull"],["I like","I dislike"],
+  ["we like","we dislike"],["you like","you dislike"],["they like","they dislike"],["vegetables","boring vegetables"],["market","crowded market"],["weather","gloomy weather"],["day","tiring day"],
+  ["morning","dull morning"],["food","bland food"],["trip","tiring trip"],["journey","exhausting journey"],
+  ["bus","crowded bus"],["traffic","terrible traffic"]];
+function positivity(st, lv) {
+  swap(st, "positivity", lv > 0 ? TO_POS : TO_NEG);
+  const two = A(lv) === 2;
+  if (lv > 0) {
+    if (st.type === "q") frame(st, "positivity", ["Happily,", "With a smile,", "Cheerfully,"], ["|I would be glad to hear it."], two);
+    else if (st.type === "i") frame(st, "positivity", ["Happily", "Gladly"], [", you will love it", ", it will be great", ", it will make you smile"], two);
+    else frame(st, "positivity", ["Luckily,", "Thankfully,", "Happily,", "Fortunately,", "Gladly,"], [", and it feels wonderful", ", and I could not be happier", ", which is a lovely thing", ", and that makes me smile"], two);
+  } else {
+    if (st.type === "q") frame(st, "positivity", ["Sadly,", "Annoyingly,", "Sigh,"], ["|I am tired of asking."], two);
+    else if (st.type === "i") frame(st, "positivity", ["Sigh,", "Reluctantly"], [", if you really must", ", though it will probably be dull", ", not that it will help"], two);
+    else frame(st, "positivity", ["Unfortunately,", "Sadly,", "Regrettably,", "Sigh,", "Gloomily,"], [", though I am not looking forward to it", ", and honestly it is a bit of a drag", ", which is rather tiresome", ", and I am not happy about it"], two);
+  }
+}
+
+/* ---- SIMPLICITY ---- */
+const TO_SIMPLE = [["purchase","buy"],["purchased","bought"],["commence","start"],["commenced","started"],["approximately","about"],["utilize","use"],["require","need"],["requires","needs"],["numerous","many"],
+  ["sufficient","enough"],["attempt","try"],["attempted","tried"],["inform","tell"],["demonstrate","show"],["obtain","get"],["obtained","got"],["residence","home"],["vehicle","car"],["automobile","car"],
+  ["consume","eat"],["additional","more"],["additionally","also"],["therefore","so"],["large","big"],["enormous","huge"],["inexpensive","cheap"],["believe","think"],["terminate","end"],["conclude","end"],
+  ["endeavor","try"],["subsequently","later"],["prior to","before"],["in order to","to"],["assist","help"],["inquire","ask"],["proceed","go"],["proceeding","going"],["regarding","about"],["nevertheless","still"],
+  ["comprehend","understand"],["construct","build"],["possess","have"],["reside","live"],["sufficiently","enough"],["fundamental","basic"],["magnificent","great"],["exceedingly","very"],["accomplish","do"],
+  ["acquire","get"],["observe","see"],["converse","talk"],["physician","doctor"],["marketplace","market"],["fatigued","tired"],["swift","fast"],["rapid","fast"],["intelligent","smart"],["frequently","often"],
+  ["adequate","enough"],["assistance","help"],["difficulty","trouble"],["establish","set up"],["receive","get"],["permit","let"],["attempting","trying"],["purchasing","buying"],["ascertain","find out"],["currently","now"],
+  ["previously","before"],["individuals","people"],["individual","person"],["beverage","drink"],["perspire","sweat"],["illuminate","light up"],["extremely","very"],["considerable","large"],["indicate","show"]];
+const TO_FANCY = [["buy","purchase"],["bought","purchased"],["use","utilize"],["many","numerous"],["enough","sufficient"],["try","attempt"],["tell","inform"],
+  ["car","vehicle"],["eat","consume"],["big","enormous"],["small","minuscule"],["very","extremely"],["also","additionally"],["happy","joyful"],["sad","sorrowful"],["fast","rapid"],["smart","intelligent"],
+  ["to start","to commence"],["start","commence"],["kids","children"],["before","prior to"],["help","assist"],["ask","inquire"],["get","acquire"],["go","proceed"],["going","proceeding"],["see","observe"],
+  ["talk","converse"],["doctor","physician"],["market","marketplace"],["tired","fatigued"],["often","frequently"],["people","individuals"],["drink","beverage"],["house","dwelling"],["friend","companion"],
+  ["friends","companions"],["need","require"],["needs","requires"],["want","desire"],["build","construct"],["now","presently"],
+  ["money","currency"],["food","sustenance"],["rain","precipitation"],["vegetables","vegetable produce"],["fruits","fruit produce"],["walk","stroll"],["run","sprint"],["shop","establishment"],
+  ["clothes","garments"],["boss","superior"],["job","occupation"],["hard","arduous"],["easy","effortless"],["important","paramount"]];
+const PURPOSE = /^(I|We|You|He|She|They) (am|is|are) (going|heading|walking|travelling|traveling|off|running|driving) to ((?:the |a |an |my |our |your |his |her |their )?[^,]+?) to (buy|get|see|meet|visit|eat|study|learn|take|bring|find|play|watch|read|pay|sell|collect|make|cook|drink|have|pick up) (.+)$/i;
+const PURPOSE_F = /^(I|We|You|He|She|They) (am|is|are) going to ((?:the |a |an |my |our |your |his |her |their )?[^,]+?) to (buy|get|see|meet|visit|eat|study|learn|take|bring|find|play|watch|read|pay|sell|collect|make|cook|drink|have)\b/i;
+function simplicity(st, lv) {
+  const o = st.core;
+  if (lv > 0) {
+    let t = applyMap(st.core, TO_SIMPLE);
+    if (t === o) {   // nothing to swap: split one long sentence into two short ones
+      const m = t.match(PURPOSE);
+      if (m) { const sub = m[1], will = /^i$/i.test(sub) ? "I" : cap1(sub.toLowerCase()); t = `${sub} ${m[2]} ${m[3]} to ${m[4]}. ${will} will ${m[5]} ${m[6]}`; }
+      else if (/, (and|but|so) /i.test(t)) t = t.replace(/, (and|but|so) /i, (x, w) => ". " + (w.toLowerCase() === "and" ? "Also, " : w.toLowerCase() === "but" ? "But " : "So ")).replace(/\. (Also, |But |So )([a-z])/, (x, a, b) => ". " + a + b.toUpperCase());
+      else if (/ (because|which|although|while) /i.test(t)) t = t.replace(/ (because|although|while) /i, (x, w) => ". This is " + (w.toLowerCase() === "because" ? "because " : w.toLowerCase() === "although" ? "even though " : "while "));
+    }
+    st.core = t; if (t !== o) st.swapped.simplicity = true;
+    if (A(lv) === 2 || t === o) {
+      if (st.type === "q") frame(st, "simplicity", ["Simply,", "In plain words,"], ["|Please keep the answer simple."], A(lv) === 2);
+      else frame(st, "simplicity", ["In simple words,", "Put simply,", "Simply put,", "To say it plainly,"], ["|That is all."], A(lv) === 2 && t === o);
+    }
+  } else {
+    let t = applyMap(st.core, TO_FANCY);
+    t = t.replace(MOTION, (m, a) => a + " proceeding to ").replace(/\bto (?=(purchase|acquire|consume|observe|obtain)\b)/g, "in order to ");
+    st.core = t; if (t !== o) st.swapped.simplicity = true;
+    if (A(lv) === 2 || t === o) {
+      if (st.type === "q") frame(st, "simplicity", ["If I may enquire,", "To phrase it with more sophistication,"], ["|Kindly answer with equal eloquence."], A(lv) === 2);
+      else frame(st, "simplicity", ["To express this with greater sophistication,", "In more elaborate terms,", "Stated eloquently,", "Put in refined language,"], [", to put it elegantly"], A(lv) === 2);
+    }
+  }
+}
+
+/* ---- CERTAINTY ---- */
+const TO_SURE = [["I think","I am sure"],["I guess","I am sure"],["I believe","I am sure"],["maybe","definitely"],["perhaps","certainly"],["probably","definitely"],["possibly","certainly"],
+  ["might","will"],["usually","always"],["sometimes","always"],["seems to be","is"],["I am not sure","I am sure"],["I suppose","I know"],["likely","certain"]];
+const TO_UNSURE = [["I am sure","I think"],["I know","I think"],["definitely","probably"],["certainly","possibly"],["always","usually"],["will","might"],["must","might"],["surely","perhaps"],
+  ["clearly","maybe"],["never","rarely"],["exactly","roughly"],["certain","likely"]];
+function certainty(st, lv) {
+  swap(st, "certainty", lv > 0 ? TO_SURE : TO_UNSURE);
+  const two = A(lv) === 2;
+  if (lv > 0) {
+    if (st.type === "q") frame(st, "certainty", ["Tell me for certain:", "I need to know exactly:"], ["|I want a definite answer."], two);
+    else if (st.type === "i") frame(st, "certainty", ["Definitely", "Make sure you", "Without fail,"], [", no doubt about it"], two);
+    else frame(st, "certainty", ["I am absolutely sure that", "Without a doubt,", "Certainly,", "There is no doubt that", "I know for a fact that"], [", for sure", ", without question", ", no doubt about it", ", I promise you"], two);
+  } else {
+    if (st.type === "q") frame(st, "certainty", ["I was wondering,", "I am not sure, but", "Just wondering,"], ["|I could be wrong, though."], two);
+    else if (st.type === "i") frame(st, "certainty", ["Maybe", "Perhaps you could", "You might want to"], [", if that makes sense"], two);
+    else frame(st, "certainty", ["I think", "Maybe", "I guess", "It seems that", "Perhaps", "I am not completely sure, but"], [", I suppose", ", or something like that", ", if I remember right", ", but I could be wrong"], two);
+  }
+}
+
+/* ---- WORDINESS ---- */
+const TO_WORDY = [["now","at this point in time"],["soon","in the near future"],["because","due to the fact that"],["if","in the event that"],["many","a large number of"],["before","prior to"],
+  ["after","subsequent to"],["also","in addition to that"],
+  ["to buy","in order to buy"],["to get","in order to get"],["to see","in order to see"],["to meet","in order to meet"],["to eat","in order to eat"],["to learn","in order to learn"],["to find","in order to find"],
+  ["to visit","in order to visit"],["to study","in order to study"],["to take","in order to take"],["to bring","in order to bring"],["to play","in order to play"],["to pay","in order to pay"],["to make","in order to make"],
+  ["to cook","in order to cook"],["to watch","in order to watch"],["to read","in order to read"],
+  ["today","on this very day"],["always","at all times"],["never","at no time"]];
+const TO_BRIEF = [["at this point in time","now"],["at the present time","now"],["in the near future","soon"],["due to the fact that","because"],["in the event that","if"],["a large number of","many"],
+  ["prior to","before"],["subsequent to","after"],["as a result","so"],["in addition to that","also"],["make a start on","start"],["bring to a conclusion","end"],["make use of","use"],["make clear","show"],
+  ["It should be noted that ","" ],["It is worth mentioning that ",""],["in order to","to"],["with regard to","about"],["on the other hand","but"],["have the ability to","can"],["at all times","always"],["at no time","never"]];
+const BRIEF_FILL = /\b(really|very|just|quite|actually|basically|literally|simply|honestly|rather|somewhat|a little|a bit|kind of|sort of)\b,?\s*/gi;
+function wordiness(st, lv) {
+  const o = st.core, two = A(lv) === 2;
+  if (lv > 0) {
+    let t = applyMap(st.core, TO_WORDY);
+    t = t.replace(/\b(am|is|are)\s+(?!(?:interesting|amazing|boring|exciting|annoying|surprising|disappointing|charming|stunning|nothing|something|anything|everything|tiring|confusing|amusing|pleasing|relaxing|inspiring|shocking)\b)(?=[a-z]+ing\b)/gi, (m, a) => a + " currently ");
+    st.core = t; if (t !== o) st.swapped.wordiness = true;
+    if (two || t === o) {
+      if (st.type === "q") frame(st, "wordiness", ["I would like to ask you,", "I was wondering whether you could tell me,"], ["|A detailed answer would be most welcome."], two);
+      else if (st.type === "i") frame(st, "wordiness", ["I would ask that you", "It would be good if you would"], [", if you would be so good as to do so"], two);
+      else frame(st, "wordiness", ["It should be noted that", "As a matter of fact,", "To put it another way,", "As you may already be aware,", "In actual fact,"], [", as I have just stated", ", if one may put it that way", ", which is to say exactly what I mean"], two);
+    }
+  } else {
+    let t = applyMap(st.core, TO_BRIEF).replace(BRIEF_FILL, "");
+    const drop = x => x.replace(/^(I|We|They|You|He|She) (am|are|is) (?=[a-z]+ing\b)/i, "");
+    const forp = x => x.replace(/\bto (buy|get|collect|pick up|find) /i, "for ");
+    const noArt = x => x.replace(/(\s)(the|a|an) /gi, "$1");
+    if (!two) { if (t === o) t = drop(t); if (t === o) t = applyMap(t, CONTR, true); if (t === o) t = noArt(t); }
+    else { t = forp(drop(t)); t = applyMap(t, CONTR, true); if (t === o) t = noArt(t); }
+    t = cap1(tidy(t));
+    st.core = t; if (t !== o) st.swapped.wordiness = true;
+    if (t === o) frame(st, "wordiness", ["Briefly,", "In short,"], null, false);
+    st.end = st.end || ".";
+  }
+}
+
+/* ---- EXCITEMENT ---- */
+const TO_CALM = [["amazing","good"],["awesome","good"],["fantastic","good"],["incredible","good"],["fabulous","good"],["thrilled","pleased"],["excited","interested"],["loved","liked"],["loves","likes"],
+  ["love","like"],["furious","annoyed"],["terrified","uneasy"],["hate","dislike"],["huge","large"],["super","quite"],["so much","a fair amount"],["can't wait","am looking forward"],["fun","pleasant"]];
+const TO_EXCITED = [["good","amazing"],["great","fantastic"],["nice","awesome"],["happy","thrilled"],["big","huge"],["like","love"],["likes","loves"],["liked","loved"],["fun","a total blast"],
+  ["interesting","fascinating"],["pretty","gorgeous"],["tasty","delicious"],["very","super"],["new","brand new"],["fast","lightning fast"],["tall","towering"],["wonderful","absolutely incredible"]];
+function excitement(st, lv) {
+  const two = A(lv) === 2;
+  if (lv > 0) {
+    swap(st, "excitement", TO_EXCITED);
+    if (st.type === "q") { frame(st, "excitement", ["Oh,", "Wow,", "Quick,", "Okay okay,"], ["|I cannot wait to hear it!"], two); }
+    else if (st.type === "i") { frame(st, "excitement", ["Come on,", "Hurry,", "Go on,"], null, false); st.end = two ? "!!" : "!"; }
+    else { frame(st, "excitement", ["Wow,", "Yay!", "Oh my goodness,", "Guess what?", "Hooray,", "Whoa,"], ["|It is going to be amazing!", "|I cannot wait!", "|So exciting!", "|What a day!"], two); st.end = two ? "!!" : "!"; }
+    st.swapped.excitement = true;
+  } else {
+    swap(st, "excitement", TO_CALM);
+    st.end = st.end.includes("?") ? "?" : ".";
+    if (st.type === "q") frame(st, "excitement", ["When you have a moment,", "Whenever it suits you,"], ["|No hurry at all."], two);
+    else if (st.type === "i") frame(st, "excitement", ["Take your time and", "Whenever you are ready,", "When you feel like it,"], null, false);
+    else frame(st, "excitement", ["Calmly,", "Quietly,", "Without any rush,", "In a relaxed way,", "Taking it easy,"], [", at a relaxed pace", ", without any fuss", ", taking my time"], two);
+    st.swapped.excitement = true;
+  }
+}
+
+const FN = { formality, politeness, positivity, simplicity, certainty, wordiness, excitement };
+const WHAT = { formality: "formality", politeness: "politeness", positivity: "positivity", simplicity: "simplicity", certainty: "certainty", wordiness: "wordiness", excitement: "excitement" };
+function processSentence(core0, end0, lv) {
+  const st = { core: core0, end: end0, type: sType(core0, end0), pre: [], post: [], swapped: {}, framed: {}, seed: core0 };
+  for (const ax of ORDER) if (lv[ax]) FN[ax](st, lv[ax]);
+  let core = st.core;
+  if (st.pre.length) { const last = st.pre[st.pre.length - 1]; core = /[!?.]$/.test(last) ? cap1(core) : lowerFirst(core); }
+  const inline = st.post.filter(p => p[0] !== "|").join(""), sents = st.post.filter(p => p[0] === "|").map(p => " " + p.slice(1)).join("");
+  let end = st.end || ".";
+  const s = (st.pre.length ? st.pre.join(" ") + " " : "") + core + inline + end + sents;
+  return { text: s, st };
+}
+// every slider that is not Neutral is applied, one after the other; each sentence is handled on its own
+function ruleRewrite(s, lv) {
+  const src = tidy(norm(s)), changed = {};
+  const parts = src.match(/[^.!?]+[.!?]*\s*/g) || [src];
+  const out = parts.map(seg => {
+    const m = seg.match(/^(\s*)([\s\S]*?)([.!?]*)(\s*)$/);
+    const [, pre, core, end, post] = m;
+    if (!core) return seg;
+    const r = processSentence(core, end, lv);
+    for (const ax of AX) if (lv[ax] && (r.st.swapped[ax] || r.st.framed[ax])) changed[ax] = r.st.swapped[ax] && r.st.framed[ax] ? "swapped words and added a phrase" : r.st.swapped[ax] ? "swapped words" : "added a phrase";
+    return pre + r.text + post;
+  }).join("");
+  return { text: fixArticles(tidy(out)).replace(/\s+([,.!?])/g, "$1").replace(/([.!?])\1(?![.!?])/g, "$1").replace(/,\s*,/g, ",").replace(/([.!?]) ([a-z])/g, (m, a, b) => a + " " + b.toUpperCase()), changed };
+}
+
+const LEVELS = {
+  formality: ["Casual", "Neutral", "Formal"], politeness: ["Blunt", "Neutral", "Polite"],
+  positivity: ["Negative", "Neutral", "Positive"], simplicity: ["Fancy words", "Neutral", "Simple words"],
+  certainty: ["Unsure", "Neutral", "Sure"], wordiness: ["Brief", "Neutral", "Wordy"], excitement: ["Calm", "Neutral", "Excited"]
+};
+const S = { orig: "", ov: null, pos: null, lv: Object.fromEntries(AX.map(a => [a, 0])), busy: false, dirty: false, trail: [], line: null, timer: null };
+
+function copyVec(v) { return Float32Array.from(v); }
+async function embedText(t) { return copyVec((await embedder(t, { pooling: "mean", normalize: true })).data); }
+function dot(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
+const same = (a, b) => norm(a).trim().toLowerCase() === norm(b).trim().toLowerCase();
+
+// rules only: says which options changed the text and which found no rule
+function rewriteRules(s, lv) {
+  const r = ruleRewrite(s, lv), notes = [];
+  for (const ax of AX) {
+    if (!lv[ax]) continue;
+    notes.push(r.changed[ax] ? `${ax}: ${r.changed[ax]}` : `${ax}: no change needed`);
+  }
+  return { text: r.text, notes };
+}
+
+/* ---- sliders: one per option, Neutral in the middle, slide left or right. Any number can be moved at once. ---- */
+function buildSliders() {
+  const box = $("sliders");
+  for (const ax of AX) {
+    const row = document.createElement("div"); row.className = "orow";
+    row.innerHTML = `<div class="oname">${cap1(ax)}</div><div><input type="range" min="-2" max="2" step="1" value="0" aria-label="${ax}"><div class="ends"><span>${LEVELS[ax][0]}</span><span>Neutral</span><span>${LEVELS[ax][2]}</span></div><div class="ends" style="opacity:.6;font-size:.7rem"><span>very</span><span>slightly</span><span>|</span><span>slightly</span><span>very</span></div></div>`;
+    const r = row.querySelector("input");
+    r.oninput = () => { S.lv[ax] = +r.value; clearTimeout(S.timer); S.timer = setTimeout(pump, 150); };
+    box.appendChild(row);
+  }
+}
+function levelLabel(lv) { const a = AX.filter(x => lv[x]).map(x => (A(lv[x]) === 2 ? "very " : "slightly ") + LEVELS[x][lv[x] > 0 ? 2 : 0].toLowerCase()); return a.length ? a.join(", ") : "no change"; }
+
+/* ---- trail in the galaxy ---- */
+function clearTrail() {
+  S.trail.forEach(t => { scene.remove(t.sprite); t.sprite.material.dispose(); });
+  S.trail = [];
+  if (S.line) { scene.remove(S.line); S.line.geometry.dispose(); S.line = null; }
+  $("sTrail").hidden = true; $("sTrail").innerHTML = "";
+}
+function hash(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function addTrail(text, ev, lv, sc) {
+  if (same(text, S.orig) || S.trail.some(t => same(t.text, text))) return;
+  const p = locate(ev).p, h = hash(text);
+  p.x += ((h & 255) / 255 - 0.5) * 2.4; p.y += (((h >> 8) & 255) / 255 - 0.5) * 2.4; p.z += (((h >> 16) & 255) / 255 - 0.5) * 2.4;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xfb923c, depthTest: false, transparent: true, blending: THREE.AdditiveBlending }));
+  sprite.scale.set(4, 4, 1); sprite.position.copy(p); sprite.renderOrder = 9; scene.add(sprite);
+  S.trail.push({ text, p, sc, lv: levelLabel(lv), sprite });
+  if (S.trail.length > 40) { const o = S.trail.shift(); scene.remove(o.sprite); o.sprite.material.dispose(); }
+  if (S.line) { scene.remove(S.line); S.line.geometry.dispose(); }
+  const pts = [S.pos, ...S.trail.map(t => t.p)];
+  S.line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xfb923c, transparent: true, opacity: 0.7 }));
+  scene.add(S.line);
+  flyTo(p);
+  let len = 0; for (let i = 1; i < pts.length; i++) len += pts[i].distanceTo(pts[i - 1]);
+  const rows = S.trail.slice(-10).reverse().map(t => `<tr><td>${t.lv}</td><td></td><td>${t.sc.toFixed(2)}</td></tr>`).join("");
+  const box = $("sTrail"); box.hidden = false;
+  box.innerHTML = `<b>Orange trail: ${S.trail.length} rewrite${S.trail.length === 1 ? "" : "s"}, total length ${len.toFixed(1)} units</b> (a short trail means the meaning stayed put)<table class="glog"><tr><th>Sliders</th><th>Rewrite</th><th>Meaning kept</th></tr>${rows}</table>`;
+  box.querySelectorAll("tr").forEach((tr, i) => { if (i > 0) tr.children[1].textContent = S.trail.slice(-10).reverse()[i - 1].text; });
+}
+
+/* ---- live rewrite ---- */
+function showScore(sc) {
+  $("sBar").style.width = Math.max(0, sc) * 100 + "%";
+  $("sScore").textContent = `Meaning kept: ${sc.toFixed(2)} cosine similarity (${sc >= 0.85 ? "meaning preserved" : sc >= 0.6 ? "some drift" : "meaning drifted"})`;
+}
+async function restyle() {
+  if (!S.orig) { $("sOut").textContent = 'Press "Send it through" above first.'; return; }
+  if (/[\u0900-\u097F]/.test(S.orig)) { $("sOut").textContent = "Style works on English sentences only."; return; }
+  const lv = { ...S.lv };
+  if (AX.every(a => !lv[a])) { $("sOut").textContent = S.orig; $("sNotes").textContent = "Every slider is on Neutral. Move one left or right."; showScore(1); return; }
+  $("sNotes").textContent = "Rewriting...";
+  const h = rewriteRules(S.orig, lv);
+  $("sOut").textContent = h.text; $("sNotes").textContent = h.notes.join(" | ");
+  const ev = await embedText(h.text), sc = dot(S.ov, ev);
+  showScore(sc); addTrail(h.text, ev, lv, sc);
+}
+async function pump() {
+  if (S.busy) { S.dirty = true; return; }
+  S.busy = true;
+  try { do { S.dirty = false; await restyle(); } while (S.dirty); }
+  catch (e) { $("sNotes").textContent = "Error: " + e.message; }
+  finally { S.busy = false; }
+}
+// called whenever a new sentence is placed in the galaxy
+function styleSet(text, v, p) {
+  S.orig = text; S.ov = copyVec(v); S.pos = p.clone(); clearTrail();
+  $("sOrig").textContent = text; pump();
+}
+
+buildSliders();
+$("sClear").onclick = () => { clearTrail(); };
+$("sGo").onclick = () => {
+  const t = $("sinp").value.trim();
+  if (!t) { $("sStatus").textContent = "Type a sentence first."; return; }
+  $("inp").value = t; run();
+};
+
+/* ============ MODULE 4: GUESS MY WORD ============ */
+class Engine {
+  constructor(ak) {
+    this.Q = ak.questions; this.W = ak.words;
+    this.nQ = this.Q.length; this.nW = this.W.length;
+    this.M = new Uint8Array(this.nW * this.nQ);
+    this.W.forEach((w, j) => w.q.forEach(k => { this.M[j * this.nQ + k] = 1; }));
+  }
+  has(j, k) { return this.M[j * this.nQ + k] === 1; }
+  // questions that really split the candidates (not all yes, not all no)
+  valid(cand, asked) {
+    const cnt = new Int32Array(this.nQ);
+    for (const j of cand) { const o = j * this.nQ; for (let k = 0; k < this.nQ; k++) cnt[k] += this.M[o + k]; }
+    const ks = [];
+    for (let k = 0; k < this.nQ; k++) if (!asked.has(k) && cnt[k] > 0 && cnt[k] < cand.length) ks.push(k);
+    return { ks, cnt };
+  }
+  // the 50/50 question: yes-count closest to half of the candidates
+  best(cand, asked) {
+    const { ks, cnt } = this.valid(cand, asked);
+    let bk = -1, bs = Infinity;
+    for (const k of ks) { const s = Math.abs(cnt[k] - cand.length / 2); if (s < bs) { bs = s; bk = k; } }
+    return bk;
+  }
+  filter(cand, k, yes) { return cand.filter(j => this.has(j, k) === yes); }
+}
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function simulate(E, target, greedy, rnd) {
+  let cand = Array.from({ length: E.nW }, (_, j) => j), asked = new Set(), steps = 0;
+  while (cand.length > 1) {
+    let k;
+    if (greedy) k = E.best(cand, asked);
+    else { const { ks } = E.valid(cand, asked); k = ks.length ? ks[Math.floor(rnd() * ks.length)] : -1; }
+    if (k < 0) break;
+    cand = E.filter(cand, k, E.has(target, k)); asked.add(k); steps++;
+  }
+  return { steps, left: cand.length };
+}
+
+let AK = null, E = null, game = null, wordGal = null;
+
+async function loadAkinator() {
+  const ak = await fetch("akinator.json").then(r => { if (!r.ok) throw new Error("akinator.json not found"); return r.json(); });
+  AK = ak; E = new Engine(ak); buildQS();
+  $("gStart").disabled = false; $("bList").disabled = false;
+  $("gMsg").textContent = `Ready: ${E.nW} words.`;
+}
+
+function applyFade() {
+  if (!G || !points) return;
+  const col = points.geometry.attributes.color.array;
+  for (let i = 0; i < G.n; i++) {
+    let f = 0.9;
+    if (game) f = 0.6;
+    if (hiddenType(G.data[i])) f = 0;
+    if (isBad(G.data[i])) f = 0;
+    col[i * 3] = baseRGB[i * 3] * f; col[i * 3 + 1] = baseRGB[i * 3 + 1] * f; col[i * 3 + 2] = baseRGB[i * 3 + 2] * f;
+  }
+  points.geometry.attributes.color.needsUpdate = true;
+}
+
+function moveGalaxy(intoGame) {
+  userMarker.visible = !intoGame && !!lastText;
+  const wrap = $("gwrap"), leg = $("legend");
+  setLegend(intoGame);
+  if (intoGame) { $("gameSlot").append(wrap, leg); wrap.classList.add("small"); $("movedNote").hidden = false; }
+  else { $("galaxyHome").append(wrap, leg); wrap.classList.remove("small"); $("movedNote").hidden = true; }
+}
+
+async function dm(params) {   // Datamuse: free online dictionary, no key needed
+  const j = await fetchJSON("https://api.datamuse.com/words?md=pf&" + params);
+  return j.filter(x => /^[a-z]{3,14}$/.test(x.word)).map(x => {
+    const t = x.tags || [], f = t.find(a => a.startsWith("f:"));
+    return { w: x.word, p: t.filter(a => !a.includes(":")), f: f ? +f.slice(2) : 0 };
+  });
+}
+function mergeLists(rs) {
+  const m = new Map();
+  rs.filter(r => r.status === "fulfilled").forEach(r => r.value.forEach(e => { if (!m.has(e.w)) m.set(e.w, e); }));
+  return [...m.values()];
+}
+let QS = [];
+function cutGroups(keys, n) {
+  const uniq = [...new Set(keys)].sort((a, b) => a < b ? -1 : 1), cnt = new Map();
+  keys.forEach(k => cnt.set(k, (cnt.get(k) || 0) + 1));
+  const groups = []; let cur = [], c = 0;
+  for (const u of uniq) { cur.push(u); c += cnt.get(u); if (c >= keys.length / n && groups.length < n - 1) { groups.push(cur); cur = []; c = 0; } }
+  if (cur.length) groups.push(cur);
+  return groups;
+}
+function buildQS() {
+  QS = E.Q.map((x, k) => ({ q: x.q, g: x.g || "", o: ["Yes", "No"], f: j => E.has(j, k) ? 0 : 1 }));
+  const cats = [...new Set(E.W.map(w => w.c))];
+  QS.push({ q: "What kind of word is it?", g: "", o: cats, f: j => cats.indexOf(E.W[j].c), sp: 0, cat: 1 });
+  const nk = E.W.map(w => w.w.length), ng = cutGroups(nk, 4);
+  QS.push({ q: "How many letters does your word have?", g: "", o: ng.map(g => g[0] === g[g.length - 1] ? g[0] + " letters" : g[0] + " to " + g[g.length - 1] + " letters"), f: j => ng.findIndex(g => g.includes(nk[j])), sp: 1 });
+}
+const qText = k => QS[k].q;
+const wordOf = j => E.W[j].w;
+const PEN = 0.12;   // an answer that disagrees with a word's labels multiplies its chance by this, so one slip is not fatal
+function wts(g) { return g.mis.map((m, j) => g.rej.has(j) ? 0 : Math.pow(PEN, m)); }
+function fitCount(g) { let mn = 99, c = 0; g.mis.forEach((m, j) => { if (!g.rej.has(j) && m < mn) mn = m; }); g.mis.forEach((m, j) => { if (!g.rej.has(j) && m === mn) c++; }); return c; }
+function bestQ(g, w, total) {   // the question that tells me the most (highest entropy of the answers)
+  let bk = -1, bi = 0.3;
+  for (let k = 0; k < QS.length; k++) {
+    if (g.asked.has(k)) continue;
+    const m = new Array(QS[k].o.length).fill(0);
+    for (let j = 0; j < w.length; j++) if (w[j] > 0) m[QS[k].f(j)] += w[j];
+    let H = 0; for (const x of m) if (x > 0) H -= (x / total) * Math.log2(x / total);
+    if (QS[k].sp) H *= 0.95;
+    if (H > bi) { bi = H; bk = k; }
+  }
+  return bk;
+}
+function decide(g) {
+  const w = wts(g), total = w.reduce((a, b) => a + b, 0);
+  if (total === 0) return { mode: "stuck" };
+  if (g.asked.size === 0) { const ck = QS.findIndex(x => x.cat); if (ck >= 0) return { mode: "ask", cur: ck }; }
+  let top = 0; w.forEach((x, j) => { if (x > w[top]) top = j; });
+  if (w[top] / total >= 0.35 || g.log.filter(l => !l.guess).length >= 20) return { mode: "guess", cur: top };
+  const k = bestQ(g, w, total);
+  return k < 0 ? { mode: "guess", cur: top } : { mode: "ask", cur: k };
+}
+function applyAnswer(g, k, a) { if (a !== "m") g.mis.forEach((m, j) => { if (QS[k].f(j) !== a) g.mis[j]++; }); g.asked.add(k); }
+
+function snap() { const g = game; g.stack.push({ mis: g.mis.slice(), asked: new Set(g.asked), log: g.log.slice(), rej: new Set(g.rej) }); }
+function startGame() {
+  game = { mis: new Array(E.nW).fill(0), asked: new Set(), log: [], stack: [], rej: new Set(), cur: null, mode: "ask" };
+  moveGalaxy(true); ansMarker.visible = false; controls.autoRotate = true;
+  $("gBox").hidden = false; $("gStart").textContent = "Restart game";
+  nextTurn();
+  $("gBox").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function nextTurn() { const d = decide(game); game.mode = d.mode; game.cur = d.cur; render(); applyFade(); }
+async function placeWord(w) {   // the guessed word lands in the map by meaning
+  if (!embedder || !game) return;
+  try {
+    const { p } = locate(await embedText(w));
+    if (!game) return;
+    ansMarker.position.copy(p); ansMarker.visible = true; flyTo(p);
+  } catch (e) { /* the map is only a bonus */ }
+}
+function answer(a) {
+  const g = game;
+  if (g.mode === "ask") {
+    snap(); const k = g.cur, before = fitCount(g);
+    applyAnswer(g, k, a);
+    g.log.push({ k, q: qText(k), a, al: a === "m" ? "Not sure" : QS[k].o[a], before, after: fitCount(g) });
+    nextTurn();
+  } else if (g.mode === "guess") {
+    const w = wordOf(g.cur);
+    if (a === "y") { g.mode = "won"; render(); applyFade(); placeWord(w); }
+    else { snap(); const before = fitCount(g); g.rej.add(g.cur); g.log.push({ q: `Is it "${w}"?`, a: "n", al: "No", before, after: fitCount(g), guess: 1 }); nextTurn(); }
+  }
+}
+function undo() { const g = game, s = g.stack.pop(); if (!s) return; Object.assign(g, s); ansMarker.visible = false; nextTurn(); }
+function quitGame() {
+  game = null; moveGalaxy(false); ansMarker.visible = false; $("gBox").hidden = true; $("gLogBox").hidden = true;
+  $("gStart").textContent = "Start game"; applyFade();
+}
+function render() {
+  const g = game, yes = $("bYes"), no = $("bNo"), maybe = $("bMaybe");
+  $("gStuck").hidden = true; $("gWhy").textContent = ""; $("gHint").textContent = ""; $("gOpts").innerHTML = "";
+  yes.hidden = no.hidden = maybe.hidden = false; yes.textContent = "Yes"; no.textContent = "No";
+  const asked = g.log.filter(l => !l.guess).length;
+  $("gKind").textContent = `Question ${asked + 1}`;
+  if (g.mode === "ask") {
+    $("gQ").textContent = qText(g.cur);
+    if (QS[g.cur].g) $("gHint").textContent = "Hint: " + QS[g.cur].g;
+    if (QS[g.cur].o.length > 2) {
+      yes.hidden = no.hidden = true;
+      QS[g.cur].o.forEach((lab, i) => { const b = document.createElement("button"); b.textContent = lab; b.onclick = () => answer(i); $("gOpts").appendChild(b); });
+    }
+  } else if (g.mode === "guess") {
+    $("gKind").textContent = "My guess"; $("gQ").textContent = `Is it "${wordOf(g.cur)}"?`; yes.textContent = "Yes, that's it!"; maybe.hidden = true;
+  } else if (g.mode === "won") {
+    $("gKind").textContent = "Solved"; $("gQ").textContent = `Got it: "${wordOf(g.cur)}" in ${asked} question${asked === 1 ? "" : "s"}.`;
+    $("gHint").textContent = "The golden dot is where your word lands on the map, next to sentences with a similar meaning.";
+    yes.hidden = no.hidden = maybe.hidden = true;
+  } else {
+    $("gKind").textContent = "I am stuck"; $("gQ").textContent = "I could not find your word.";
+    $("gHint").textContent = "Your word may not be in my word list. Use Undo, or type your word to see why.";
+    yes.hidden = no.hidden = maybe.hidden = true; $("gStuck").hidden = false;
+  }
+  $("bUndo").disabled = g.stack.length === 0;
+  const n = fitCount(g);
+  $("gInfo").textContent = g.mode === "stuck" ? "0 words possible." : `${n} of ${E.nW} words fit your answers best (about ${Math.log2(Math.max(n, 1)).toFixed(1)} bits left to find out).`;
+  const box = $("gLogBox"); box.hidden = g.log.length === 0;
+  if (g.log.length) {
+    const rows = g.log.map((l, i) => `<tr><td>${i + 1}</td><td></td><td>${l.al}</td><td>${l.before} to ${l.after}</td></tr>`).join("");
+    box.innerHTML = `<b>What I asked and how many words still fit</b><table class="glog"><tr><th>#</th><th>Question</th><th>Answer</th><th>Words that fit</th></tr>${rows}</table>`;
+    box.querySelectorAll("tr").forEach((tr, i) => { if (i > 0) tr.children[1].textContent = g.log[i - 1].q; });
+  }
+}
+function why() {
+  const g = game, w = $("gWord").value.trim().toLowerCase(), out = $("gWhy");
+  if (!w) { out.textContent = "Type the word you were thinking of."; return; }
+  const j = E.W.findIndex(x => x.w === w);
+  if (j < 0) { out.textContent = `"${w}" is not in my list of ${E.nW} words.`; return; }
+  if (g.rej.has(j)) { out.textContent = `I guessed "${w}" earlier and you said No. Press Undo to take that back.`; return; }
+  const bad = g.log.filter(l => !l.guess && l.a !== "m" && QS[l.k].f(j) !== l.a);
+  out.textContent = bad.length ? "My labels disagree with your answer to: " + bad.map(l => `"${l.q}" (you said ${l.al})`).join("; ") + "." : `All answers agree with "${w}". Try Undo.`;
+}
+
+/* ---- How it works: pictures, not just text ---- */
+function buildHow() {
+  const real = game ? game.log.filter(l => !l.guess) : [];
+  const rows = real.length ? real.map((l, i) => ["Q" + (i + 1), l.after, l.before]) : (() => { const a = []; let n = E.nW; while (n > 1) { a.push(n); n = Math.ceil(n / 2); } a.push(1); return a; })().map((n, i) => ["Q" + (i + 1), n, 0]);
+  const top = Math.log2(Math.max(E.nW, ...rows.map(r => r[1])));
+  const funnel = rows.map(r => `<div class="fitrow" style="grid-template-columns:40px 1fr 80px"><span>${r[0]}</span><div class="gauge"><div style="width:${Math.max(1, Math.min(100, Math.log2(Math.max(r[1], 1)) / top * 100))}%;background:linear-gradient(90deg,#22d3ee,#a78bfa)"></div></div><span>${r[1]} left</span></div>`).join("");
+  const blocks = (y, t) => Array.from({ length: t }, (_, i) => `<span class="blk" style="width:16px;height:16px;background:${i < y ? "#34d399" : "#f472b6"}"></span>`).join("");
+  const box = (x, c, a, b, d) => `<rect x="${x}" y="14" width="228" height="96" rx="12" fill="${c}22" stroke="${c}"/><text x="${x + 114}" y="40" text-anchor="middle" fill="${c}" font-weight="700" font-size="15">${a}</text><text x="${x + 114}" y="64" text-anchor="middle" fill="#e6ebff" font-size="12.5">${b}</text><text x="${x + 114}" y="84" text-anchor="middle" fill="#8d97c2" font-size="12">${d}</text>`;
+  $("howBox").innerHTML = `
+  <b style="font-size:1.1rem">1. The steps</b>
+  <svg viewBox="0 0 760 150" style="width:100%;margin-top:8px" role="img" aria-label="Three steps of the game">
+    <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0L8,4L0,8z" fill="#8d97c2"/></marker></defs>
+    ${box(4, "#22d3ee", "1. Your word", "from my word list", "I never see it")}
+    ${box(266, "#a78bfa", "2. Best question", "the one that tells most", "yes/no or multiple choice")}
+    ${box(528, "#f472b6", "3. Guess", "when one word clearly wins", "or the best-fitting word")}
+    <line x1="232" y1="62" x2="264" y2="62" stroke="#8d97c2" stroke-width="2" marker-end="url(#ar)"/><line x1="494" y1="62" x2="526" y2="62" stroke="#8d97c2" stroke-width="2" marker-end="url(#ar)"/>
+    <text x="248" y="52" text-anchor="middle" fill="#8d97c2" font-size="11">answer</text><text x="510" y="52" text-anchor="middle" fill="#8d97c2" font-size="11">repeat</text>
+    <text x="380" y="136" text-anchor="middle" fill="#fbbf24" font-size="13">Your word is found, so the AI embeds it and a golden dot lands on the map</text>
+  </svg>
+  <b style="font-size:1.1rem">2. What makes a question good</b>
+  <div class="cards3"><div class="taxcard"><div class="tn" style="color:#34d399">Good question: 8 yes, 8 no</div><div class="blocks" style="margin-top:6px">${blocks(8, 16)}</div><div class="td">Whatever you answer, half the words disappear. Information = 1.00 bit.</div></div>
+  <div class="taxcard"><div class="tn" style="color:#f87171">Bad question: 15 yes, 1 no</div><div class="blocks" style="margin-top:6px">${blocks(15, 16)}</div><div class="td">You almost always say yes and learn very little. Information = 0.34 bit.</div></div></div>
+  <p class="note">A word that disagrees with one of your answers is not thrown away: its chance is just cut to about one eighth, so one slip never ends the game. Green square = word that fits "yes". Pink square = word that fits "no". Bits = log2(words before / words after). I always pick the question closest to half and half.</p>
+  <b style="font-size:1.1rem">3. ${real.length ? "Your game so far" : "Example"}: the words left after each question</b>
+  <p class="note">${real.length ? "Real numbers from your current game." : "Example with perfect halving of all the words. Start a game to see your own numbers."} A shorter bar means fewer words left (log scale).</p>
+  ${funnel}
+  `;
+}
+$("bHow").onclick = () => { const b = $("howBox"); b.hidden = !b.hidden; $("bHow").textContent = b.hidden ? "How it works" : "Hide how it works"; if (!b.hidden) buildHow(); };
+
+$("gStart").onclick = startGame;
+function fillList() {
+  const q = $("listQ").value.trim().toLowerCase(), ws = E.W.map(w => w.w).sort().filter(w => w.includes(q));
+  $("listN").textContent = `${ws.length} of ${E.nW} words`;
+  $("listWords").textContent = ""; ws.forEach(w => { const d = document.createElement("div"); d.textContent = w; $("listWords").appendChild(d); });
+}
+$("bList").onclick = () => { const b = $("listBox"); b.hidden = !b.hidden; $("bList").textContent = b.hidden ? "See the word list" : "Hide the word list"; if (!b.hidden) fillList(); };
+$("listQ").oninput = fillList;
+$("bYes").onclick = () => answer(game.mode === "ask" ? 0 : "y"); $("bNo").onclick = () => answer(game.mode === "ask" ? 1 : "n"); $("bMaybe").onclick = () => answer("m");
+$("bUndo").onclick = undo; $("bQuit").onclick = quitGame; $("bWhy").onclick = why;
+
+$("gGo").onclick = () => {
+  const t = $("ginp").value.trim();
+  if (!t) { $("gstatus").textContent = "Type a sentence first."; return; }
+  $("inp").value = t; run();
+};
+$("gFind").onclick = () => {
+  const box = $("myDot");
+  if (!userMarker || !userMarker.visible) {
+    box.hidden = false; box.textContent = "Your sentence is not in the galaxy yet. Press \"Send it through\" first and wait a moment.";
+    return;
+  }
+  box.hidden = false; box.innerHTML = "<b>Your sentence:</b> ";
+  const sp = document.createElement("span"); sp.textContent = lastText; sp.style.color = "#fff"; box.appendChild(sp);
+  flyTo(userMarker.position, 60);
+  $("gwrap").scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
+/* ============ START-UP ============ */
+initGalaxy().then(loadAkinator).catch(e => {
+  if (!G) $("gstatus").textContent = "Could not load the galaxy: " + e.message;
+  $("gMsg").textContent = "Game not ready: " + e.message;
+});
+
+(async () => {
+  try {
+    for (let i = 0; i < MODELS.length; i++) {
+      $("status").textContent = `Loading ${MODELS[i].name} (${i + 1} of ${MODELS.length})...`;
+      tokenizers.push(await AutoTokenizer.from_pretrained(MODELS[i].id));
+      $("bar").style.width = ((i + 1) / MODELS.length * 100) + "%";
+    }
+    $("go").disabled = false; $("gGo").disabled = false; $("sGo").disabled = false;
+    $("go").onclick = () => { run(); if ($("inp").value.trim()) { $("tokens").hidden = false; $("tokentax").hidden = false; } };
+    run();
+  } catch (e) {
+    $("status").textContent = "Could not load models: " + e.message + ". Check your internet and refresh.";
+    return;
+  }
+  try {
+    embedder = await pipeline("feature-extraction", "Xenova/paraphrase-multilingual-MiniLM-L12-v2", {
+      progress_callback: p => { if (p.status === "progress" && G) $("gstatus").textContent = `Loading meaning model (about 120 MB, first visit only)... ${Math.round(p.progress)}%`; }
+    });
+    placeInGalaxy($("inp").value.trim());
+  } catch (e) {
+    $("gstatus").textContent = "Could not load the meaning model: " + e.message;
+    $("sStatus").textContent = "Style needs the meaning model, which failed to load.";
+    return;
+  }
+  $("sStatus").textContent = "Ready.";
+})();
+</script>
+<script>
+(function () {
+  var views = { tokens: "view-tokens", galaxy: "galaxy", style: "style", guess: "guess" };
+  function g(id) { return document.getElementById(id); }
+  // show the sentence written on the Token page on the back of every planet
+  function setSentence() {
+    var v = (g("inp").value || "").trim() || "Write a sentence on the Token page";
+    
+  }
+  function route() {
+    var h = location.hash.replace("#", "");
+    var isApp = !!views[h], isMenu = (h === "menu");
+    g("landing").hidden = isApp || isMenu;
+    g("menu").hidden = !isMenu;
+    document.querySelector("main").hidden = !isApp;
+    for (var k in views) g(views[k]).hidden = (k !== h);
+    if (isMenu) setSentence();
+    window.scrollTo(0, 0);
+  }
+  function onLanding() { return !g("landing").hidden; }
+  // the rocket flies away, then the menu opens
+  var launching = false;
+  function go() {
+    if (!onLanding() || launching) return;
+    launching = true;
+    var r = g("rocket"); r.classList.add("launch");
+    setTimeout(function () { location.hash = "menu"; r.classList.remove("launch"); launching = false; }, 850);
+  }
+  document.addEventListener("keydown", function (e) {
+    if (onLanding() && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(); }
+  });
+  g("rocket").addEventListener("click", function (e) { e.stopPropagation(); go(); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function (b) {
+    b.onclick = function () { location.hash = b.getAttribute("data-go"); };
+    b.addEventListener("mouseenter", setSentence);
+  });
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+<script>
+(function(){var c=document.getElementById("stars"),x=c.getContext("2d"),S=[];
+function size(){c.width=innerWidth;c.height=innerHeight;S=[];var n=Math.floor(c.width*c.height/2600);
+for(var i=0;i<n;i++)S.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.3+.2,p:Math.random()*6.28,s:Math.random()*.02+.005,d:Math.random()*.15+.02,h:[210,0,45,200][Math.floor(Math.random()*4)]});}
+function draw(){x.clearRect(0,0,c.width,c.height);
+for(var i=0;i<S.length;i++){var t=S[i];t.p+=t.s;t.y+=t.d*.15;if(t.y>c.height)t.y=0;
+x.globalAlpha=.4+.6*Math.abs(Math.sin(t.p));x.fillStyle="hsl("+t.h+",25%,94%)";x.beginPath();x.arc(t.x,t.y,t.r,0,6.283);x.fill();}
+requestAnimationFrame(draw);}
+size();addEventListener("resize",size);draw();})();
+</script>
+
+<script>
+(function(){
+  var cards=[].slice.call(document.querySelectorAll("#gPurpose .fact")),seen=new Set();
+  function upd(){var n=seen.size;document.getElementById("factProg").textContent=n+" of "+cards.length+" cards explored"+(n===cards.length?" - well done!":"");document.getElementById("factGauge").style.width=(n/cards.length*100)+"%";}
+  function setOpen(c,o){c.classList.toggle("open",o);c.setAttribute("aria-expanded",o);c.querySelector(".fmore").hidden=!o;if(o){seen.add(cards.indexOf(c));upd();}}
+  cards.forEach(function(c){
+    c.addEventListener("click",function(e){if(e.target.closest(".tryit"))return;setOpen(c,!c.classList.contains("open"));});
+    c.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){if(e.target.closest(".tryit"))return;e.preventDefault();setOpen(c,!c.classList.contains("open"));}});
+  });
+  document.getElementById("factAll").onclick=function(){var open=this.textContent==="Open all";cards.forEach(function(c){setOpen(c,open);});this.textContent=open?"Close all":"Open all";};
+  document.querySelectorAll("#gPurpose .tryit").forEach(function(b){b.addEventListener("click",function(){
+    var v=b.getAttribute("data-try"),box=document.getElementById("ginp");
+    if(v==="find"){document.getElementById("gFind").click();}
+    else if(v.indexOf("try:")===0){box.value=v.slice(4);box.scrollIntoView({behavior:"smooth",block:"center"});box.focus();
+      var go=document.getElementById("gGo");if(go&&!go.disabled)go.click();}
+  });});
+})();
+</script>
+</body>
+</html>
